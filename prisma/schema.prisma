@@ -1,0 +1,239 @@
+// prisma/schema.prisma
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ==========================================
+// ENUMS (Estados válidos en el sistema)
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  OPS_MANAGER
+  SALES
+}
+
+enum SubcontractorStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum PropertyStatus {
+  RENOVATING
+  COMPLETED
+  SOLD
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum EstimateStatus {
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum AgreementStatus {
+  UNSIGNED
+  SIGNED
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIALLY_PAID
+  PAID
+}
+
+enum ActorType {
+  USER
+  SUBCONTRACTOR
+  AI
+}
+
+// ==========================================
+// ENTIDADES PRINCIPALES (CORE)
+// ==========================================
+
+model User {
+  id             String    @id @default(uuid())
+  name           String
+  email          String?   @unique
+  role           UserRole  @default(OPS_MANAGER)
+  whatsappNumber String?   @unique // Para que Lucy 2.0 le envíe alertas a Leslie/Spencer
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@map("users")
+}
+
+model Subcontractor {
+  id             String              @id @default(uuid())
+  name           String
+  tradeSpecialty String?             // Plomería, Electricidad, Jardinería, etc.
+  whatsappNumber String              @unique // Clave para la integración con WhatsApp
+  status         SubcontractorStatus @default(ACTIVE)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  // Relaciones
+  tasks          Task[]
+  estimates      Estimate[]
+  agreements     Agreement[]
+  invoices       InvoicePayment[]
+
+  @@map("subcontractors")
+}
+
+model Property {
+  id                  String         @id @default(uuid())
+  address             String         @unique
+  status              PropertyStatus @default(RENOVATING)
+  accessCodeOrLockbox String?        // Código para enviar al contratista vía WhatsApp
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  // Relaciones
+  tasks               Task[]
+  media               Media[]
+  estimates           Estimate[]
+  agreements          Agreement[]
+  invoices            InvoicePayment[]
+  activityLogs        ActivityLog[]
+
+  @@map("properties")
+}
+
+// ==========================================
+// OPERACIONES Y FLUJO DE TRABAJO (WORKFLOW)
+// ==========================================
+
+model Task {
+  id               String      @id @default(uuid())
+  propertyId       String
+  subcontractorId  String?     // Opcional hasta que se le asigne a alguien
+  description      String      // Ej. "Cortar el pasto en Brotherwood"
+  status           TaskStatus  @default(PENDING)
+  dueDate          DateTime?
+  lastContactedAt  DateTime?   // Para las alertas de "han pasado 3 días sin noticias"
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  // Relaciones
+  property         Property       @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  subcontractor    Subcontractor? @relation(fields: [subcontractorId], references: [id], onDelete: SetNull)
+  media            Media[]
+
+  @@index([propertyId])
+  @@index([subcontractorId])
+  @@map("tasks")
+}
+
+model Media {
+  id          String   @id @default(uuid())
+  propertyId  String
+  taskId      String?  // Opcional: si la foto prueba el avance de una tarea específica
+  fileUrl     String   // URL del bucket en S3/Supabase Storage
+  uploadedBy  String?  // Puede ser el ID del contratista o del usuario
+  createdAt   DateTime @default(now())
+
+  // Relaciones
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([propertyId])
+  @@index([taskId])
+  @@map("media")
+}
+
+// ==========================================
+// FINANZAS Y CONTRATOS (BUROCRACIA)
+// ==========================================
+
+model Estimate {
+  id               String         @id @default(uuid())
+  propertyId       String
+  subcontractorId  String
+  documentUrl      String?        // Enlace al archivo o foto del presupuesto
+  amount           Decimal        @db.Decimal(10, 2)
+  status           EstimateStatus @default(UNDER_REVIEW)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relaciones
+  property         Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  subcontractor    Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([subcontractorId])
+  @@map("estimates")
+}
+
+model Agreement {
+  id               String          @id @default(uuid())
+  propertyId       String
+  subcontractorId  String
+  documentUrl      String?         // Contrato firmado
+  status           AgreementStatus @default(UNSIGNED)
+  signedAt         DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // Relaciones
+  property         Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  subcontractor    Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([subcontractorId])
+  @@map("agreements")
+}
+
+model InvoicePayment {
+  id               String        @id @default(uuid())
+  propertyId       String
+  subcontractorId  String
+  amountDue        Decimal       @db.Decimal(10, 2)
+  amountPaid       Decimal       @default(0.00) @db.Decimal(10, 2)
+  invoiceUrl       String?       // Foto o PDF del recibo/factura
+  status           PaymentStatus @default(PENDING)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  // Relaciones
+  property         Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  subcontractor    Subcontractor @relation(fields: [subcontractorId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([subcontractorId])
+  @@map("invoices_payments")
+}
+
+// ==========================================
+// HISTORIAL Y AUDITORÍA (ACTIVITY LOG / CEREBRO IA)
+// ==========================================
+
+model ActivityLog {
+  id          String    @id @default(uuid())
+  propertyId  String
+  actorType   ActorType // USER, SUBCONTRACTOR o AI
+  actorName   String    // Ej. "Lucy 2.0", "Moises", "Leslie"
+  action      String    // Ej. "TASK_COMPLETED", "WHATSAPP_SENT", "PHOTO_UPLOADED"
+  description String    // Ej. "Moises reportó pasto cortado en Brotherwood Cove"
+  createdAt   DateTime  @default(now())
+
+  // Relaciones
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@index([createdAt]) // Índice para ordenar rápido las líneas de tiempo por fecha
+  @@map("activity_logs")
+}
