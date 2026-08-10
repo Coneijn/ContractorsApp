@@ -25,3 +25,17 @@ export async function getActiveAssignments() {
     return [];
   }
 }
+
+// Nueva función para actualizar el estatus de la tarea
+export async function updateTaskStatus(taskId: string, newStatus: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED') {
+  try {
+    await prisma.task.update({
+      where: { id: taskId },
+      data: { status: newStatus }
+    });
+    return { success: true };
+  } catch (error) {
+    console.error("Error actualizando estatus:", error);
+    return { success: false };
+  }
+}

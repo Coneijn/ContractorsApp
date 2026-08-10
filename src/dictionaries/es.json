@@ -1,0 +1,54 @@
+{
+  "dashboard": {
+    "title": "Panel de Contratistas",
+    "subtitle": "SpencerBuysHouses.com · Reconstrucción Next.js",
+    "tabs": {
+      "assignments": "🔨 Asignaciones",
+      "properties": "🏠 Propiedades",
+      "pastProjects": "📋 Proyectos Anteriores"
+    },
+    "roster": {
+      "approved": "✅ Aprobados / Usados",
+      "notUsed": "🔍 Aún No Usados",
+      "title": "Contratistas Activos / Aprobados"
+    },
+    "assignments": {
+      "title": "Propiedades y Asignaciones (Base de Datos)"
+    },
+    "properties": {
+      "workingOn": "Actualmente en Progreso",
+      "unassigned": "Necesita Contratista — Sin Asignar"
+    },
+    "pastProjects": {
+      "title": "Trabajos Completados"
+    },
+    "table": {
+      "property": "Propiedad",
+      "contractor": "Contratista",
+      "status": "Estatus",
+      "amount": "Monto",
+      "notes": "Notas",
+      "scope": "Alcance",
+      "date": "Fecha"
+    },
+    "messages": {
+      "loading": "Cargando propiedades...",
+      "noActive": "No hay propiedades activas.",
+      "noUnassigned": "No hay propiedades sin asignar.",
+      "noCompleted": "Aún no hay proyectos completados en la base de datos.",
+      "noTasks": "Sin tareas registradas"
+    }
+  },
+  "propertyCard": {
+    "statusPending": "📋 Programar",
+    "statusInProgress": "🔨 En Progreso",
+    "statusCompleted": "✅ Completar"
+  },
+  "badges": {
+    "inProgress": "🔨 En Progreso",
+    "scheduled": "📋 Programado",
+    "pending": "💬 Cotización Pendiente",
+    "queued": "⏳ En Espera",
+    "unassigned": "⚠️ Sin Asignar"
+  }
+}

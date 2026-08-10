@@ -1,0 +1,54 @@
+{
+  "dashboard": {
+    "title": "Contractor Dashboard",
+    "subtitle": "SpencerBuysHouses.com · Next.js Rebuild",
+    "tabs": {
+      "assignments": "🔨 Assignments",
+      "properties": "🏠 Properties",
+      "pastProjects": "📋 Past Projects"
+    },
+    "roster": {
+      "approved": "✅ Approved / Used",
+      "notUsed": "🔍 Haven't Used Yet",
+      "title": "Active / Approved Contractors"
+    },
+    "assignments": {
+      "title": "Properties & Assignments (Live Database)"
+    },
+    "properties": {
+      "workingOn": "Currently Being Worked On",
+      "unassigned": "Needs Contractor — Unassigned"
+    },
+    "pastProjects": {
+      "title": "Completed Jobs"
+    },
+    "table": {
+      "property": "Property",
+      "contractor": "Contractor",
+      "status": "Status",
+      "amount": "Amount",
+      "notes": "Notes",
+      "scope": "Scope",
+      "date": "Date"
+    },
+    "messages": {
+      "loading": "Loading properties...",
+      "noActive": "No active properties.",
+      "noUnassigned": "No unassigned properties.",
+      "noCompleted": "No completed projects in the database yet.",
+      "noTasks": "No registered tasks"
+    }
+  },
+  "propertyCard": {
+    "statusPending": "📋 Schedule (Pending)",
+    "statusInProgress": "🔨 In Progress",
+    "statusCompleted": "✅ Complete"
+  },
+  "badges": {
+    "inProgress": "🔨 In Progress",
+    "scheduled": "📋 Scheduled",
+    "pending": "💬 Quote Pending",
+    "queued": "⏳ Queued",
+    "unassigned": "⚠️ Unassigned"
+  }
+}
