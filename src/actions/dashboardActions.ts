@@ -7,15 +7,15 @@ const prisma = new PrismaClient()
 export async function getActiveAssignments() {
   try {
     const properties = await prisma.property.findMany({
-      where: {
-        status: 'RENOVATING' // Solo traemos las que están en obra
-      },
+      // Quitamos el 'where: status: RENOVATING' para poder traer también los Past Projects
       include: {
         tasks: {
           include: {
-            subcontractor: true // Traemos también los datos del contratista asignado a cada tarea
+            subcontractor: true
           }
-        }
+        },
+        estimates: true,
+        invoices: true
       }
     });
     
@@ -26,16 +26,28 @@ export async function getActiveAssignments() {
   }
 }
 
-// Nueva función para actualizar el estatus de la tarea
-export async function updateTaskStatus(taskId: string, newStatus: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED') {
+export async function updateTaskStatus(taskId: string, newStatus: string) {
   try {
     await prisma.task.update({
       where: { id: taskId },
-      data: { status: newStatus }
+      data: { status: newStatus as any } // Escotilla de escape de TS para aceptar texto libre
     });
     return { success: true };
   } catch (error) {
     console.error("Error actualizando estatus:", error);
     return { success: false };
+  }
+}
+
+// Nueva función para obtener la lista de contratistas (Roster)
+export async function getContractors() {
+  try {
+    const contractors = await prisma.subcontractor.findMany({
+      orderBy: { name: 'asc' } // Ordenamos alfabéticamente
+    });
+    return contractors;
+  } catch (error) {
+    console.error("Error jalando los contratistas:", error);
+    return [];
   }
 }

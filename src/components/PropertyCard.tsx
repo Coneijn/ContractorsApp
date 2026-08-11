@@ -17,18 +17,42 @@ type PropertyCardProps = {
 export default function PropertyCard({ taskId, propertyName, notes, status, price, onUpdate }: PropertyCardProps) {
   const { t } = useLanguage();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customStatus, setCustomStatus] = useState('');
 
   // Función que se dispara al elegir un nuevo estatus en el menú
   const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedValue = e.target.value;
+    
+    if (selectedValue === 'OTHER') {
+      setShowCustomInput(true);
+      return;
+    }
+
     if (!taskId) return;
     setIsUpdating(true);
-    const newStatus = e.target.value as 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
-    const result = await updateTaskStatus(taskId, newStatus);
+    const result = await updateTaskStatus(taskId, selectedValue);
     
     if (result.success && onUpdate) {
       onUpdate(); // Recarga los datos instantáneamente
     }
     setIsUpdating(false);
+  };
+
+  // Función exclusiva para guardar el estatus personalizado
+  const handleCustomSubmit = async () => {
+    if (!taskId || !customStatus.trim()) {
+      setShowCustomInput(false);
+      return;
+    }
+    setIsUpdating(true);
+    const result = await updateTaskStatus(taskId, customStatus);
+    if (result.success && onUpdate) {
+      onUpdate();
+    }
+    setIsUpdating(false);
+    setShowCustomInput(false);
+    setCustomStatus('');
   };
   // Colores de borde izquierdo según el estatus (recreando el diseño de Frank)
   const borderColors = {
@@ -66,22 +90,56 @@ export default function PropertyCard({ taskId, propertyName, notes, status, pric
         <Badge type={status} text={badgeLabels[status]} />
         
         {/* SELECTOR DE ACCIÓN PARA SPENCER */}
-        {taskId && (
+        {taskId && !showCustomInput && (
           <select 
             onChange={handleStatusChange}
             disabled={isUpdating}
-            // Agregamos 'appearance-none' para quitar la flecha nativa y 'text-center w-8' para hacerlo un botón cuadrado
             className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[14px] px-2 py-1 rounded transition outline-none cursor-pointer disabled:opacity-50 appearance-none text-center w-8 h-8 flex items-center justify-center shadow-sm"
             defaultValue=""
           >
-            <option value="" disabled>{isUpdating ? '⏳' : '▼'}</option>
+            <option value="" disabled>{isUpdating ? '⏳' : '🔽'}</option>
             <option value="PENDING">{t.propertyCard.statusPending}</option>
             <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
+            <option value="QUEUED">⏳ Queued</option>
             <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
+            <option value="OTHER">✏️ Otro (Escribir)</option>
           </select>
         )}
-      </div>
 
+        {/* INPUT PARA ESTATUS PERSONALIZADO */}
+        {taskId && showCustomInput && (
+          <div className="flex items-center gap-1">
+            <input 
+              type="text" 
+              value={customStatus}
+              onChange={(e) => setCustomStatus(e.target.value)}
+              placeholder="Ej. Esperando material"
+              className="bg-slate-900 border border-slate-600 text-slate-200 text-[11px] px-2 py-1.5 rounded outline-none w-32"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit()}
+            />
+            <button 
+              onClick={handleCustomSubmit}
+              disabled={isUpdating}
+              className="bg-yellow-400 text-slate-900 font-bold px-2 py-1.5 rounded text-[11px] hover:bg-yellow-500 transition"
+              title="Guardar"
+            >
+              {isUpdating ? '⏳' : '✓'}
+            </button>
+            <button 
+              onClick={() => {
+                setShowCustomInput(false);
+                setCustomStatus('');
+              }}
+              disabled={isUpdating}
+              className="bg-slate-700 text-slate-300 font-bold px-2 py-1.5 rounded text-[11px] hover:bg-slate-600 transition"
+              title="Cancelar"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
