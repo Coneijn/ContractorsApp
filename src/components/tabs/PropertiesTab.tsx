@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import Badge from '@/components/Badge';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -39,7 +40,11 @@ export default function PropertiesTab({ properties }: PropertiesTabProps) {
 
                   return (
                     <tr key={`${prop.id}-${task.id}`} className="hover:bg-slate-800 border-b border-slate-800 transition-colors">
-                      <td className="p-3"><a href="#" className="text-yellow-400 hover:underline font-bold">{prop.address}</a></td>
+                      <td className="p-3">
+                        <Link href={`/admin/property/${prop.id}`} className="text-yellow-400 hover:underline font-bold">
+                          {prop.address}
+                        </Link>
+                      </td>
                       <td className="p-3">{task.subcontractor.name} {task.subcontractor.company ? `/ ${task.subcontractor.company}` : ''}</td>
                       <td className="p-3"><Badge type={visualStatus as any} text={badgeText} /></td>
                       <td className="p-3 font-bold text-yellow-400">{formattedAmount}</td>
@@ -72,7 +77,11 @@ export default function PropertiesTab({ properties }: PropertiesTabProps) {
                 const task = prop.tasks[0];
                 return (
                   <tr key={prop.id} className="hover:bg-slate-800 border-b border-slate-800 transition-colors">
-                    <td className="p-3"><a href="#" className="text-yellow-400 hover:underline font-bold">{prop.address}</a></td>
+                    <td className="p-3">
+                      <Link href={`/admin/property/${prop.id}`} className="text-yellow-400 hover:underline font-bold">
+                        {prop.address}
+                      </Link>
+                    </td>
                     <td className="p-3 text-slate-400">{task?.description || t.dashboard.messages.noTasks}</td>
                     <td className="p-3"><Badge type="unassigned" text={t.badges.unassigned} /></td>
                   </tr>

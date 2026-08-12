@@ -84,6 +84,7 @@ export default function AssignmentsTab({ properties, onUpdate }: AssignmentsTabP
               <PropertyCard 
                 key={`${prop.id}-${task.id}`}
                 taskId={task.id}
+                propertyId={prop.id}
                 propertyName={prop.address} 
                 notes={task.description || "Sin descripción"} 
                 status={visualStatus as any} 
@@ -108,6 +109,7 @@ export default function AssignmentsTab({ properties, onUpdate }: AssignmentsTabP
             <PropertyCard 
               key={prop.id}
               taskId={task?.id}
+              propertyId={prop.id}
               propertyName={prop.address} 
               notes={task?.description || "Scope TBD"} 
               status="unassigned" 

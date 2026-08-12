@@ -1,20 +1,21 @@
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import Badge from './Badge';
 import { updateTaskStatus } from '@/actions/dashboardActions';
 
 import { useLanguage } from '@/context/LanguageContext';
-
 type PropertyCardProps = {
   taskId?: string;
+  propertyId?: string;
   propertyName: string;
   notes: string;
   status: 'in-progress' | 'scheduled' | 'pending' | 'queued' | 'unassigned';
   price?: string;
-  onUpdate?: () => void; 
+  onUpdate?: () => void;
 };
 
-export default function PropertyCard({ taskId, propertyName, notes, status, price, onUpdate }: PropertyCardProps) {
+export default function PropertyCard({ taskId, propertyId, propertyName, notes, status, price, onUpdate }: PropertyCardProps) {
   const { t } = useLanguage();
   const [isUpdating, setIsUpdating] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -77,8 +78,9 @@ export default function PropertyCard({ taskId, propertyName, notes, status, pric
       {/* Detalles de la Propiedad */}
       <div>
         <div className="font-bold text-[13px] text-slate-100 mb-0.5">
-          {/* El enlace luego lo conectaremos a la página individual de la propiedad */}
-          <a href="#" className="text-yellow-400 hover:underline">{propertyName}</a>
+          <Link href={`/admin/property/${propertyId || 'demo'}`} className="text-yellow-400 hover:underline">
+            {propertyName}
+          </Link>
         </div>
         <div className="text-[11px] text-slate-400 mt-1">
           {notes}

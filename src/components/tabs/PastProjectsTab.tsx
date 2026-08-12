@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 
 type PastProjectsTabProps = {
@@ -49,8 +50,12 @@ export default function PastProjectsTab({ properties }: PastProjectsTabProps) {
 
                   return (
                     <tr key={`${prop.id}-${task.id}`} className="hover:bg-slate-800 border-b border-slate-800 transition-colors">
-                      <td className="p-3"><a href="#" className="text-yellow-400 hover:underline font-bold">{prop.address}</a></td>
-                      <td className="p-3">{task?.subcontractor?.name || '—'}</td>
+                      <td className="p-3">
+                        <Link href={`/admin/property/${prop.id}`} className="text-yellow-400 hover:underline font-bold">
+                          {prop.address}
+                        </Link>
+                      </td>
+                      <td className="p-3">{task?.subcontractor?.name || ' '}</td>
                       <td className="p-3 text-slate-400">{task?.description || '—'}</td>
                       <td className="p-3 font-bold text-yellow-400">{formattedAmount}</td>
                       <td className="p-3 text-slate-400">{formattedDate}</td>
