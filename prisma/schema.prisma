@@ -102,10 +102,43 @@ model Property {
   address             String         @unique
   status              PropertyStatus @default(RENOVATING)
   accessCodeOrLockbox String?        // Código para enviar al contratista vía WhatsApp
+  
+  // -- NUEVOS CAMPOS (La Crema de los Tacos) --
+  county              String?
+  subdivision         String?
+  parcelId            String?
+  propertyType        String?
+  beds                Float?
+  baths               Float?
+  sqft                Int?
+  lotSize             Int?
+  yearBuilt           Int?
+  sellerName          String?
+  buyerName           String?        @default("Volunteer Homes, LLC")
+  strategy            String?        // ej. "Rental", "Flip"
+  isRaisingCapital    Boolean        @default(false)
+  closeDate           DateTime?
+  purchasePrice       Decimal?       @db.Decimal(10, 2)
+  avm                 Decimal?       @db.Decimal(10, 2)
+  estRent             Decimal?       @db.Decimal(10, 2)
+
+  // Detalles Financieros / Préstamo
+  loanLender          String?
+  loanAmount          Decimal?       @db.Decimal(10, 2)
+  loanRate            String?
+  loanMonthly         Decimal?       @db.Decimal(10, 2)
+  loanMaturity        DateTime?      // Fecha del Balloon
+  loanHoldback        Decimal?       @db.Decimal(10, 2)
+  loanCashToClose     Decimal?       @db.Decimal(10, 2)
+
+  // Detalles del Inquilino (Tenant)
+  tenantName          String?
+  leaseTerm           String?
+
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
-  // Relaciones
+  // Relaciones Existentes
   tasks               Task[]
   media               Media[]
   estimates           Estimate[]
@@ -113,7 +146,51 @@ model Property {
   invoices            InvoicePayment[]
   activityLogs        ActivityLog[]
 
+  // Relaciones Nuevas
+  conditionNotes      ConditionNote[]
+  comparables         Comparable[]
+
   @@map("properties")
+}
+
+// ==========================================
+// NUEVAS TABLAS PARA "LA CREMA DE LOS TACOS"
+// ==========================================
+
+model ConditionNote {
+  id          String   @id @default(uuid())
+  propertyId  String
+  category    String   // ej. "Roof", "Carpet", "Bathroom"
+  description String   // ej. "Needs full replacement"
+  isCritical  Boolean  @default(false) // Para poner el ⚠️
+  createdAt   DateTime @default(now())
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@map("condition_notes")
+}
+
+enum CompType {
+  SALE
+  RENT
+}
+
+model Comparable {
+  id          String   @id @default(uuid())
+  propertyId  String
+  type        CompType
+  address     String
+  specs       String?  // ej. "3/2 · 1,862 sqft"
+  price       Decimal  @db.Decimal(10, 2)
+  status      String?  // ej. "Inactive", "Sold"
+  distance    String?  // ej. "1.0mi"
+  createdAt   DateTime @default(now())
+
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@index([propertyId])
+  @@map("comparables")
 }
 
 // ==========================================
