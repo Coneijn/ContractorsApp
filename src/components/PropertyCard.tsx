@@ -10,7 +10,7 @@ type PropertyCardProps = {
   propertyId?: string;
   propertyName: string;
   notes: string;
-  status: 'in-progress' | 'scheduled' | 'pending' | 'queued' | 'unassigned';
+  status: 'in-progress' | 'scheduled' | 'pending' | 'queued' | 'unassigned' | 'completed';
   price?: string;
   onUpdate?: () => void;
 };
@@ -18,40 +18,34 @@ type PropertyCardProps = {
 export default function PropertyCard({ taskId, propertyId, propertyName, notes, status, price, onUpdate }: PropertyCardProps) {
   const { t } = useLanguage();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [selectedStatus, setSelectedStatus] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customStatus, setCustomStatus] = useState('');
 
-  // Función que se dispara al elegir un nuevo estatus en el menú
-  const handleStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = e.target.value;
-    
-    if (selectedValue === 'OTHER') {
-      setShowCustomInput(true);
+  const handleSave = async () => {
+    if (!taskId || !selectedStatus) {
+      setIsEditing(false);
       return;
     }
-
-    if (!taskId) return;
-    setIsUpdating(true);
-    const result = await updateTaskStatus(taskId, selectedValue);
     
-    if (result.success && onUpdate) {
-      onUpdate(); // Recarga los datos instantáneamente
-    }
-    setIsUpdating(false);
-  };
-
-  // Función exclusiva para guardar el estatus personalizado
-  const handleCustomSubmit = async () => {
-    if (!taskId || !customStatus.trim()) {
-      setShowCustomInput(false);
-      return;
-    }
     setIsUpdating(true);
-    const result = await updateTaskStatus(taskId, customStatus);
+    const statusToSave = selectedStatus === 'OTHER' ? customStatus : selectedStatus;
+    
+    const result = await updateTaskStatus(taskId, statusToSave);
+    
     if (result.success && onUpdate) {
       onUpdate();
     }
     setIsUpdating(false);
+    setIsEditing(false);
+    setShowCustomInput(false);
+    setCustomStatus('');
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setSelectedStatus('');
     setShowCustomInput(false);
     setCustomStatus('');
   };
@@ -62,6 +56,7 @@ export default function PropertyCard({ taskId, propertyId, propertyName, notes, 
     'pending': 'border-l-orange-500',
     'queued': 'border-l-blue-500',
     'unassigned': 'border-l-red-500',
+  'completed': 'border-l-green-600',
   };
 
   const badgeLabels = {
@@ -70,6 +65,7 @@ export default function PropertyCard({ taskId, propertyId, propertyName, notes, 
     'pending': t.badges.pending,
     'queued': t.badges.queued,
     'unassigned': t.badges.unassigned,
+    'completed': t.propertyCard.statusCompleted,
   };
 
   return (
@@ -87,58 +83,65 @@ export default function PropertyCard({ taskId, propertyId, propertyName, notes, 
         </div>
       </div>
       
-      {/* Controles y Estatus */}
+     {/* Controles y Estatus */}
       <div className="flex items-center gap-3">
         <Badge type={status} text={badgeLabels[status]} />
         
-        {/* SELECTOR DE ACCIÓN PARA SPENCER */}
-        {taskId && !showCustomInput && (
-          <select 
-            onChange={handleStatusChange}
-            disabled={isUpdating}
-            className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[14px] px-2 py-1 rounded transition outline-none cursor-pointer disabled:opacity-50 appearance-none text-center w-8 h-8 flex items-center justify-center shadow-sm"
-            defaultValue=""
-          >
-            <option value="" disabled>{isUpdating ? '⏳' : '🔽'}</option>
-            <option value="PENDING">{t.propertyCard.statusPending}</option>
-            <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
-            <option value="QUEUED">⏳ Queued</option>
-            <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
-            <option value="OTHER">✏️ Otro (Escribir)</option>
-          </select>
-        )}
-
-        {/* INPUT PARA ESTATUS PERSONALIZADO */}
-        {taskId && showCustomInput && (
-          <div className="flex items-center gap-1">
-            <input 
-              type="text" 
-              value={customStatus}
-              onChange={(e) => setCustomStatus(e.target.value)}
-              placeholder="Ej. Esperando material"
-              className="bg-slate-900 border border-slate-600 text-slate-200 text-[11px] px-2 py-1.5 rounded outline-none w-32"
-              autoFocus
-              onKeyDown={(e) => e.key === 'Enter' && handleCustomSubmit()}
-            />
-            <button 
-              onClick={handleCustomSubmit}
-              disabled={isUpdating}
-              className="bg-yellow-400 text-slate-900 font-bold px-2 py-1.5 rounded text-[11px] hover:bg-yellow-500 transition"
-              title="Guardar"
-            >
-              {isUpdating ? '⏳' : '✓'}
-            </button>
-            <button 
-              onClick={() => {
-                setShowCustomInput(false);
-                setCustomStatus('');
-              }}
-              disabled={isUpdating}
-              className="bg-slate-700 text-slate-300 font-bold px-2 py-1.5 rounded text-[11px] hover:bg-slate-600 transition"
-              title="Cancelar"
-            >
-              ✕
-            </button>
+        {taskId && (
+          <div className="flex items-center gap-2">
+            {!isEditing ? (
+              <button 
+                onClick={() => setIsEditing(true)}
+                disabled={isUpdating}
+                className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[12px] rounded transition flex items-center justify-center shadow-sm w-8 h-8 disabled:opacity-50"
+              >
+                {isUpdating ? '⏳' : '🔽'}
+              </button>
+            ) : (
+              <div className="flex items-center gap-1 bg-slate-800 border border-slate-600 rounded p-1">
+                {!showCustomInput ? (
+                  <select 
+                    value={selectedStatus}
+                    onChange={(e) => {
+                      setSelectedStatus(e.target.value);
+                      if (e.target.value === 'OTHER') setShowCustomInput(true);
+                    }}
+                    className="bg-slate-900 text-slate-200 text-[11px] px-2 py-1.5 rounded outline-none border border-slate-700"
+                  >
+                    <option value="" disabled>Seleccionar...</option>
+                    <option value="PENDING">{t.propertyCard.statusPending}</option>
+                    <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
+                    <option value="QUEUED">🔵 Queued</option>
+                    <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
+                    <option value="OTHER">✍️ Otro...</option>
+                  </select>
+                ) : (
+                  <input 
+                    type="text" 
+                    value={customStatus}
+                    onChange={(e) => setCustomStatus(e.target.value)}
+                    placeholder="Especificar estado"
+                    className="bg-slate-900 border border-slate-600 text-slate-200 text-[11px] px-2 py-1.5 rounded outline-none w-28"
+                    autoFocus
+                    onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                  />
+                )}
+                <button 
+                  onClick={handleSave}
+                  disabled={isUpdating || (!selectedStatus && !customStatus)}
+                  className="bg-green-600 hover:bg-green-500 text-white p-1.5 rounded transition flex items-center justify-center w-7 h-7 disabled:opacity-50"
+                >
+                  ✅
+                </button>
+                <button 
+                  onClick={handleCancel}
+                  disabled={isUpdating}
+                  className="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition flex items-center justify-center w-7 h-7 disabled:opacity-50"
+                >
+                  ❌
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

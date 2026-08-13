@@ -44,10 +44,48 @@ export async function getActiveAssignments() {
 
 export async function updateTaskStatus(taskId: string, newStatus: string) {
   try {
-    await prisma.task.update({
-      where: { id: taskId },
-      data: { status: newStatus as any } // Escotilla de escape de TS para aceptar texto libre
-    });
+    // Definimos los únicos estados que la base de datos permite para una Tarea
+    const validStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
+
+    // Obtenemos la tarea primero para tener el propertyId a la mano
+    const task = await prisma.task.findUnique({ where: { id: taskId } });
+
+    if (validStatuses.includes(newStatus)) {
+      if (task) {
+        // 1. Actualiza el estado en la tabla Task
+        await prisma.task.update({
+          where: { id: taskId },
+          data: { status: newStatus as any } 
+        });
+
+        // 2. Sincroniza el estado de la Propiedad automáticamente
+        if (newStatus === 'COMPLETED') {
+          await prisma.property.update({
+            where: { id: task.propertyId },
+            data: { status: 'COMPLETED' }
+          });
+        } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
+          await prisma.property.update({
+            where: { id: task.propertyId },
+            data: { status: 'RENOVATING' }
+          });
+        }
+      }
+    } else {
+      // Si es un estado personalizado ("QUEUED" o texto libre), lo guardamos en el ActivityLog 
+      // para no romper la base de datos.
+      if (task) {
+        await prisma.activityLog.create({
+          data: {
+            propertyId: task.propertyId,
+            actorType: 'USER',
+            actorName: 'Admin (Dashboard)', // Podrías cambiar esto dinámicamente si tienes Auth
+            action: 'CUSTOM_STATUS_UPDATE',
+            description: `Estatus personalizado asignado a la tarea: ${newStatus}`,
+          }
+        });
+      }
+    }
     return { success: true };
   } catch (error) {
     console.error("Error actualizando estatus:", error);
@@ -120,5 +158,67 @@ export async function getPropertyById(id: string) {
   } catch (error) {
     console.error("Error obteniendo la propiedad:", error);
     return null;
+  }
+}
+
+// Nueva función para procesar el formulario de Invoice/Estimate
+export async function submitContractorForm(data: any, mode: 'invoice' | 'estimate') {
+  try {
+    // 1. Buscar o crear al contratista por teléfono (whatsappNumber es único según el schema)
+    let subcontractor = await prisma.subcontractor.findUnique({
+      where: { whatsappNumber: data.phone }
+    });
+
+    if (!subcontractor) {
+      subcontractor = await prisma.subcontractor.create({
+        data: {
+          name: `${data.firstName} ${data.lastName}`.trim(),
+          whatsappNumber: data.phone,
+          email: data.email || null,
+          hasW9: data.w9Status === 'yes',
+        }
+      });
+    }
+
+    // 2. Buscar o crear la propiedad por dirección (address es única)
+    let property = await prisma.property.findUnique({
+      where: { address: data.address }
+    });
+
+    if (!property) {
+      property = await prisma.property.create({
+        data: { address: data.address }
+      });
+    }
+
+    // 3. Crear el registro en la tabla correspondiente según el modo
+    if (mode === 'invoice') {
+      await prisma.invoicePayment.create({
+        data: {
+          propertyId: property.id,
+          subcontractorId: subcontractor.id,
+          workDescription: data.workDescription,
+          startDate: data.startDate ? new Date(data.startDate) : null,
+          finishDate: data.finishDate ? new Date(data.finishDate) : null,
+          agreedAmount: parseFloat(data.agreedAmount) || 0,
+          requestedAmount: parseFloat(data.requestedAmount) || 0,
+        }
+      });
+    } else {
+      await prisma.estimate.create({
+        data: {
+          propertyId: property.id,
+          subcontractorId: subcontractor.id,
+          workDescription: data.workDescription,
+          estimatedStartDate: data.estStartDate ? new Date(data.estStartDate) : null,
+          amount: parseFloat(data.requestedAmount) || 0, // En estimate se usa el amount solicitado
+        }
+      });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error guardando el formulario:", error);
+    return { success: false, error: "Error en base de datos" };
   }
 }

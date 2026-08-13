@@ -14,6 +14,7 @@ export default function Badge({ type, text }: BadgeProps) {
     'pending': 'bg-orange-950 text-orange-400',
     'queued': 'bg-blue-900 text-blue-400',
     'unassigned': 'bg-red-950 text-red-400',
+    'completed': 'bg-green-600 text-white',
   };
 
   // Color por defecto para los estados personalizados

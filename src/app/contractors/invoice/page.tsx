@@ -1,19 +1,33 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
+import { submitContractorForm, getContractors, getActiveAssignments } from '@/actions/dashboardActions';
 
 type Mode = 'invoice' | 'estimate';
 
 export default function InvoiceFormPage() {
   const { t, language, setLanguage } = useLanguage();
-  
   const [mode, setMode] = useState<Mode>('invoice');
   const [w9Status, setW9Status] = useState<string>('');
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  
+  // Estados para las listas desplegables
+  const [contractorsList, setContractorsList] = useState<any[]>([]);
+  const [propertiesList, setPropertiesList] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadData() {
+      const c = await getContractors();
+      const p = await getActiveAssignments();
+      setContractorsList(c);
+      setPropertiesList(p);
+    }
+    loadData();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -26,23 +40,23 @@ export default function InvoiceFormPage() {
     setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
     try {
-      // AQUÍ IRÁ LA CONEXIÓN A TU API NEXT.JS POSTERIORMENTE
-      // await fetch('/api/submit', { method: 'POST', body: formData });
+      // Llamamos al Server Action para guardar en Prisma
+      const result = await submitContractorForm(data, mode);
       
-      // Simulamos la carga por 1.5s
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      setIsSuccess(true);
+      if (result.success) {
+        setIsSuccess(true);
+      } else {
+        throw new Error("Error guardando en la base de datos");
+      }
     } catch (error) {
-      // Fallback a Mailto (el mismo que tenías en HTML original)
+      // Fallback a Mailto en caso de que la conexión a la base de datos falle
       const subject = encodeURIComponent(`${mode === 'invoice' ? 'Invoice' : 'Estimate'}: ${data.firstName} ${data.lastName} - ${data.address}`);
       const body = encodeURIComponent(
         `Contractor: ${data.firstName} ${data.lastName}\n` +
@@ -50,8 +64,8 @@ export default function InvoiceFormPage() {
         `Email: ${data.email || 'N/A'}\n` +
         `Property: ${data.address}\n` +
         `Work Done: ${data.workDescription}\n` +
-        `Agreed Amount: ${data.agreedAmount}\n` +
-        `Requesting: ${data.requestedAmount}\n` +
+        `Agreed Amount: ${data.agreedAmount || 'N/A'}\n` +
+        `Requesting: ${data.requestedAmount || 'N/A'}\n` +
         `W-9 on file: ${data.w9Status}`
       );
       window.location.href = `mailto:admin@volunteerbuyers.com?subject=${subject}&body=${body}`;
@@ -166,6 +180,35 @@ export default function InvoiceFormPage() {
           {/* Card 1: Info */}
           <div className="bg-slate-800 rounded-xl p-5 border border-slate-700">
             <h2 className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-4 pb-2 border-b border-slate-700">{t.invoiceForm.personalInfo}</h2>
+            
+            {/* Lista desplegable para contratistas existentes */}
+            <div className="mb-4 bg-slate-900 p-3 rounded-lg border border-slate-700">
+               <label className="block text-[11px] font-semibold text-yellow-400 mb-2">SELECCIONA TU PERFIL (Si ya has trabajado con nosotros)</label>
+               <select
+                 className="w-full bg-slate-800 border border-slate-600 rounded px-2 py-1.5 text-xs text-slate-300 outline-none focus:border-yellow-400"
+                 onChange={(e) => {
+                   const selected = contractorsList.find(c => c.whatsappNumber === e.target.value);
+                   if (selected) {
+                     (document.querySelector('input[name="firstName"]') as HTMLInputElement).value = selected.name.split(' ')[0] || '';
+                     (document.querySelector('input[name="lastName"]') as HTMLInputElement).value = selected.name.split(' ').slice(1).join(' ') || '';
+                     (document.querySelector('input[name="phone"]') as HTMLInputElement).value = selected.whatsappNumber || '';
+                     (document.querySelector('input[name="email"]') as HTMLInputElement).value = selected.email || '';
+                     
+                     if (selected.hasW9) {
+                       setW9Status('yes');
+                     } else {
+                       setW9Status('no');
+                     }
+                   }
+                 }}
+               >
+                 <option value="">-- Soy un contratista nuevo --</option>
+                 {contractorsList.map(c => (
+                   <option key={c.id} value={c.whatsappNumber}>{c.name} ({c.whatsappNumber})</option>
+                 ))}
+               </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-semibold text-slate-300 mb-1">{t.invoiceForm.firstName}</label>
@@ -192,7 +235,16 @@ export default function InvoiceFormPage() {
             
             <div className="mb-4">
               <label className="block text-xs font-semibold text-slate-300 mb-1">{t.invoiceForm.address}</label>
-              <input type="text" name="address" required placeholder="1234 Main St" className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-yellow-400 transition" />
+              <select 
+                name="address" 
+                required 
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none focus:border-yellow-400 transition"
+              >
+                <option value="">-- Selecciona la propiedad asignada --</option>
+                {propertiesList.map((p) => (
+                  <option key={p.id} value={p.address}>{p.address}</option>
+                ))}
+              </select>
             </div>
 
             <div className="mb-4">
