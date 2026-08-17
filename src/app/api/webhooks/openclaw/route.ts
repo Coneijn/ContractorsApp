@@ -1,92 +1,95 @@
 // src/app/api/webhooks/openclaw/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, TaskStatus, PropertyStatus } from '@prisma/client';
 
-// Idealmente, importa el cliente de prisma desde tu carpeta lib/utils si ya lo tienes instanciado globalmente
-// import prisma from '@/lib/prisma'; 
 const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
     
-    // NOTA: Ajusta estas variables dependiendo de cómo te mande el payload el Webhook de GoHighLevel
-    const phone = body.contact?.phone || body.phone;
-    const message = body.message || body.body; 
+    // 1. Extraemos el payload estructurado que envía OpenClaw
+    const { 
+      whatsappNumber, 
+      propertyId, 
+      target,       // 'TASK' o 'PROPERTY'
+      taskId,       // Requerido si target es 'TASK'
+      newStatus,    // Ej. 'COMPLETED', 'IN_PROGRESS'
+      originalMessage // Opcional: el mensaje del contratista para los logs
+    } = body;
 
-    if (!phone || !message) {
-      return NextResponse.json({ error: "Faltan datos en el payload (teléfono o mensaje)" }, { status: 400 });
+    // Validación de campos mínimos requeridos por la base de datos
+    if (!whatsappNumber || !propertyId || !target || !newStatus) {
+      return NextResponse.json(
+        { error: "Faltan datos requeridos (whatsappNumber, propertyId, target, newStatus)" }, 
+        { status: 400 }
+      );
     }
 
-    // ==========================================
-    // FILTRO 1: ¿QUIÉN? (Validación de Identidad)
-    // ==========================================
-    // Buscamos al contratista por su número de WhatsApp
+    // 2. Identificar al contratista que originó la acción
     const subcontractor = await prisma.subcontractor.findUnique({
-      where: { whatsappNumber: phone },
+      where: { whatsappNumber: whatsappNumber },
     });
 
     if (!subcontractor) {
-      // No está en el directorio. 
-      // Retornamos success: true para que GHL no falle, pero con el mensaje de rechazo.
-      return NextResponse.json({
-        success: true,
-        replyMessage: "Hola, actualmente no figuras en nuestro directorio de contratistas. Por favor, contacta a Carol o a Ventas para darte de alta."
-      });
+      return NextResponse.json(
+        { error: `Contratista con número ${whatsappNumber} no encontrado en el sistema` }, 
+        { status: 404 }
+      );
     }
 
-    // ==========================================
-    // FILTRO 2: ¿DÓNDE? (Validación de Propiedad)
-    // ==========================================
-    // Aquí es donde OpenClaw (tu agente) brilla. Necesita cruzar el mensaje con las propiedades.
+    let actionPerformed = "";
+    let actionDescription = "";
+
+    // 3. Ejecutar la modificación en la base de datos según el objetivo (Target)
+    if (target === 'TASK') {
+      if (!taskId) {
+        return NextResponse.json({ error: "taskId es requerido cuando el target es TASK" }, { status: 400 });
+      }
+      
+      await prisma.task.update({
+        where: { id: taskId },
+        data: { status: newStatus as TaskStatus }
+      });
+
+      actionPerformed = `TASK_UPDATED_TO_${newStatus}`;
+      actionDescription = `Tarea ${taskId} actualizada vía OpenClaw. Mensaje original: "${originalMessage || 'N/A'}"`;
     
-    // Obtenemos un listado rápido de propiedades activas para pasárselo al prompt de OpenClaw
-    const activeProperties = await prisma.property.findMany({
-      select: { id: true, address: true, status: true },
-      where: { status: 'RENOVATING' } 
-    });
-
-    // 🧠 [AQUÍ IRÍA LA LLAMADA A LA API DE TU AGENTE IA / OPENCLAW]
-    // const prompt = `Mensaje: ${message}. Propiedades: ${JSON.stringify(activeProperties)}...`;
-    // const iaResponse = await fetchOpenClawData(prompt);
-    // const { propertyId, actionTarget } = iaResponse;
-
-    // SIMULACIÓN DE RESULTADO DE LA IA:
-    const propertyId = null; // Cambiar esto por el ID que devuelva OpenClaw
-
-    if (!propertyId) {
-      return NextResponse.json({
-        success: true,
-        replyMessage: "No logré identificar de qué propiedad me hablas. ¿Podrías ser un poco más específico (ej. enviar la dirección o el código)?"
+    } else if (target === 'PROPERTY') {
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { status: newStatus as PropertyStatus }
       });
+
+      actionPerformed = `PROPERTY_UPDATED_TO_${newStatus}`;
+      actionDescription = `Propiedad actualizada vía OpenClaw. Mensaje original: "${originalMessage || 'N/A'}"`;
+    
+    } else {
+      return NextResponse.json({ error: "Target no válido. Debe ser 'TASK' o 'PROPERTY'" }, { status: 400 });
     }
 
-    // ==========================================
-    // FILTRO 3: ¿QUÉ? (Validación Lógica y Escritura)
-    // ==========================================
-    // Si llegamos aquí: ¡El número es válido y sabemos de qué propiedad hablan!
-    // OpenClaw ahora te dirá qué hacer (actualizar tarea, registrar gasto, etc.)
-
-    // Por ahora, registramos la interacción exitosa en el Activity Log para mantener la auditoría
+    // 4. Registrar en el Activity Log usando los tipos definidos en tu esquema
     await prisma.activityLog.create({
       data: {
         propertyId: propertyId,
-        actorType: "SUBCONTRACTOR",
-        actorName: subcontractor.name,
-        action: "WHATSAPP_MESSAGE_PROCESSED",
-        description: `Mensaje de WhatsApp procesado vía OpenClaw: "${message}"`,
+        actorType: "SUBCONTRACTOR", // Clasificado bajo el Enum ActorType
+        actorName: subcontractor.name, 
+        action: actionPerformed,
+        description: actionDescription,
       }
     });
 
-    // Esta es la respuesta que GoHighLevel agarrará para enviársela de vuelta al contratista
-    return NextResponse.json({
-      success: true,
-      replyMessage: "¡Entendido! He actualizado la base de datos con tu reporte."
+    // 5. Respuesta HTTP 200 directa para confirmar a OpenClaw que el trabajo se hizo
+    return NextResponse.json({ 
+      success: true, 
+      message: "Base de datos actualizada correctamente" 
     });
 
   } catch (error) {
-    console.error("Error en Webhook OpenClaw:", error);
-    // Devolvemos 500 si el servidor truena, para que los logs de GHL lo registren
-    return NextResponse.json({ error: "Error interno del servidor al procesar el mensaje" }, { status: 500 });
+    console.error("Error al procesar la actualización desde OpenClaw:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor al modificar la base de datos" }, 
+      { status: 500 }
+    );
   }
 }
