@@ -12,16 +12,23 @@ export async function POST(req: Request) {
     const { 
       whatsappNumber, 
       propertyId, 
-      target,       // 'TASK' o 'PROPERTY'
+      target,       // 'TASK', 'PROPERTY' o 'NEW_TASK'
       taskId,       // Requerido si target es 'TASK'
-      newStatus,    // Ej. 'COMPLETED', 'IN_PROGRESS'
+      newStatus,    // Ej. 'COMPLETED', 'IN_PROGRESS' (Requerido para TASK y PROPERTY)
+      description,  // Requerido si target es 'NEW_TASK'
       originalMessage // Opcional: el mensaje del contratista para los logs
     } = body;
 
     // Validación de campos mínimos requeridos por la base de datos
-    if (!whatsappNumber || !propertyId || !target || !newStatus) {
+    if (!whatsappNumber || !propertyId || !target) {
       return NextResponse.json(
-        { error: "Faltan datos requeridos (whatsappNumber, propertyId, target, newStatus)" }, 
+        { error: "Faltan datos requeridos (whatsappNumber, propertyId, target)" }, 
+        { status: 400 }
+      );
+    }
+    if ((target === 'TASK' || target === 'PROPERTY') && !newStatus) {
+      return NextResponse.json(
+        { error: "newStatus es requerido para actualizar tareas o propiedades" }, 
         { status: 400 }
       );
     }
@@ -52,20 +59,54 @@ export async function POST(req: Request) {
         data: { status: newStatus as TaskStatus }
       });
 
+      // Si la tarea se completa, completamos la propiedad automáticamente para enviarla a Past Projects
+      if (newStatus === 'COMPLETED') {
+        await prisma.property.update({
+          where: { id: propertyId },
+          data: { status: 'COMPLETED' }
+        });
+      } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
+        await prisma.property.update({
+          where: { id: propertyId },
+          data: { status: 'RENOVATING' }
+        });
+      }
+
       actionPerformed = `TASK_UPDATED_TO_${newStatus}`;
       actionDescription = `Tarea ${taskId} actualizada vía OpenClaw. Mensaje original: "${originalMessage || 'N/A'}"`;
-    
+      
     } else if (target === 'PROPERTY') {
       await prisma.property.update({
         where: { id: propertyId },
         data: { status: newStatus as PropertyStatus }
       });
-
       actionPerformed = `PROPERTY_UPDATED_TO_${newStatus}`;
       actionDescription = `Propiedad actualizada vía OpenClaw. Mensaje original: "${originalMessage || 'N/A'}"`;
-    
+      
+    } else if (target === 'NEW_TASK') {
+      // Extraemos la descripción para la nueva asignación
+      const taskDescription = description || originalMessage || "Nueva tarea asignada vía WhatsApp";
+      
+      await prisma.task.create({
+        data: {
+          propertyId: propertyId,
+          subcontractorId: subcontractor.id,
+          description: taskDescription,
+          status: 'PENDING'
+        }
+      });
+      
+      // Aseguramos que la propiedad pase a RENOVATING para que aparezca en el tablero activo
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { status: 'RENOVATING' }
+      });
+      
+      actionPerformed = `NEW_TASK_CREATED`;
+      actionDescription = `Nueva asignación creada vía OpenClaw: "${taskDescription}"`;
+
     } else {
-      return NextResponse.json({ error: "Target no válido. Debe ser 'TASK' o 'PROPERTY'" }, { status: 400 });
+      return NextResponse.json({ error: "Target no válido. Debe ser 'TASK', 'PROPERTY' o 'NEW_TASK'" }, { status: 400 });
     }
 
     // 4. Registrar en el Activity Log usando los tipos definidos en tu esquema
