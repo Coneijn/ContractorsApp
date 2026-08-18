@@ -5,9 +5,10 @@ import { useLanguage } from '@/context/LanguageContext';
 type AssignmentsTabProps = {
   properties: any[];
   onUpdate: () => void;
+  onAssign?: (propId: string, contractorId?: string, desc?: string) => void;
 };
 
-export default function AssignmentsTab({ properties, onUpdate }: AssignmentsTabProps) {
+export default function AssignmentsTab({ properties, onUpdate, onAssign }: AssignmentsTabProps) {
   const { t } = useLanguage();
 
   // 1. Filtramos solo las propiedades que están activas (en obra)
@@ -92,6 +93,7 @@ export default function AssignmentsTab({ properties, onUpdate }: AssignmentsTabP
                 status={visualStatus as any} 
                 price={priceLabel}
                 onUpdate={onUpdate}
+                onAssign={(propId, desc) => onAssign && onAssign(propId, group.contractor.id, desc)}
               />
             );
           })}
@@ -116,6 +118,7 @@ export default function AssignmentsTab({ properties, onUpdate }: AssignmentsTabP
               notes={task?.description || "Scope TBD"} 
               status="unassigned" 
               onUpdate={onUpdate}
+              onAssign={(propId, desc) => onAssign && onAssign(propId, undefined, desc)}
             />
           );
         })}

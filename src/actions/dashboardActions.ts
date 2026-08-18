@@ -220,5 +220,24 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
   } catch (error) {
     console.error("Error guardando el formulario:", error);
     return { success: false, error: "Error en base de datos" };
+    }
   }
-}
+
+  export async function createAssignment(propertyId: string, subcontractorId: string, description: string) {
+    try {
+      await prisma.task.create({
+        data: { propertyId, subcontractorId, description, status: 'PENDING' }
+      });
+      
+      // Actualizamos la propiedad a RENOVATING si estaba terminada o sin asignar
+      await prisma.property.update({
+        where: { id: propertyId },
+        data: { status: 'RENOVATING' }
+      });
+      
+      return { success: true };
+    } catch (error) {
+      console.error("Error creando asignación:", error);
+      return { success: false, error: "Error interno" };
+    }
+  }

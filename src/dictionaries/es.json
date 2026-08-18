@@ -19,6 +19,15 @@
       "workingOn": "Actualmente en Progreso",
       "unassigned": "Necesita Contratista — Sin Asignar"
     },
+    "modals": {
+      "newAssignment": "Nueva Asignación",
+      "selectProperty": "Seleccionar Propiedad...",
+      "selectContractor": "Seleccionar Contratista...",
+      "taskDesc": "Descripción de la tarea",
+      "cancel": "Cancelar",
+      "assign": "Asignar",
+      "statusTitle": "Actualizar Estatus"
+    },
     "pastProjects": {
       "title": "Trabajos Completados"
     },

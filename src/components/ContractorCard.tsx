@@ -8,6 +8,7 @@ export type HistoryItem = {
 };
 
 type ContractorProps = {
+  id: string;
   name: string;
   company?: string;
   phone: string;
@@ -16,13 +17,24 @@ type ContractorProps = {
   hasW9: boolean;
   historyType: 'Work History' | 'Bid History' | 'Trades';
   historyItems: HistoryItem[];
+  onAssign?: (contractorId: string) => void;
 };
 
-export default function ContractorCard({ name, company, phone, email, area, hasW9, historyType, historyItems }: ContractorProps) {
+export default function ContractorCard({ id, name, company, phone, email, area, hasW9, historyType, historyItems, onAssign }: ContractorProps) {
   return (
-    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 transition hover:border-yellow-400 flex flex-col">
+    <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 transition hover:border-yellow-400 flex flex-col relative">
+      
+      {onAssign && (
+        <button 
+          onClick={() => onAssign(id)}
+          className="absolute top-4 right-4 bg-slate-700 hover:bg-slate-600 text-yellow-400 text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-sm"
+        >
+          + Asignar
+        </button>
+      )}
+
       {/* Encabezado de la tarjeta */}
-      <div className="text-base font-extrabold text-yellow-400 mb-0.5">{name}</div>
+      <div className="text-base font-extrabold text-yellow-400 mb-0.5 pr-16">{name}</div>
       <div className="text-xs text-slate-500 mb-2.5">{company || '—'}</div>
 
       {/* Datos de contacto */}

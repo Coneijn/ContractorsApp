@@ -13,11 +13,12 @@ type PropertyCardProps = {
   status: 'in-progress' | 'scheduled' | 'pending' | 'queued' | 'unassigned' | 'completed';
   price?: string;
   onUpdate?: () => void;
+  onAssign?: (propId: string, desc?: string) => void;
 };
 
-export default function PropertyCard({ taskId, propertyId, propertyName, notes, status, price, onUpdate }: PropertyCardProps) {
-  const { t } = useLanguage();
-  const [isUpdating, setIsUpdating] = useState(false);
+export default function PropertyCard({ taskId, propertyId, propertyName, notes, status, price, onUpdate, onAssign }: PropertyCardProps) {
+const { t } = useLanguage() as any;
+const [isUpdating, setIsUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
@@ -87,64 +88,79 @@ export default function PropertyCard({ taskId, propertyId, propertyName, notes, 
       <div className="flex items-center gap-3">
         <Badge type={status} text={badgeLabels[status]} />
         
-        {taskId && (
-          <div className="flex items-center gap-2">
-            {!isEditing ? (
-              <button 
-                onClick={() => setIsEditing(true)}
-                disabled={isUpdating}
-                className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[12px] rounded transition flex items-center justify-center shadow-sm w-8 h-8 disabled:opacity-50"
-              >
-                {isUpdating ? '⏳' : '🔽'}
-              </button>
-            ) : (
-              <div className="flex items-center gap-1 bg-slate-800 border border-slate-600 rounded p-1">
-                {!showCustomInput ? (
-                  <select 
-                    value={selectedStatus}
-                    onChange={(e) => {
-                      setSelectedStatus(e.target.value);
-                      if (e.target.value === 'OTHER') setShowCustomInput(true);
-                    }}
-                    className="bg-slate-900 text-slate-200 text-[11px] px-2 py-1.5 rounded outline-none border border-slate-700"
-                  >
-                    <option value="" disabled>Seleccionar...</option>
-                    <option value="PENDING">{t.propertyCard.statusPending}</option>
-                    <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
-                    <option value="QUEUED">🔵 Queued</option>
-                    <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
-                    <option value="OTHER">✍️ Otro...</option>
-                  </select>
-                ) : (
-                  <input 
-                    type="text" 
-                    value={customStatus}
-                    onChange={(e) => setCustomStatus(e.target.value)}
-                    placeholder="Especificar estado"
-                    className="bg-slate-900 border border-slate-600 text-slate-200 text-[11px] px-2 py-1.5 rounded outline-none w-28"
-                    autoFocus
-                    onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-                  />
-                )}
-                <button 
-                  onClick={handleSave}
-                  disabled={isUpdating || (!selectedStatus && !customStatus)}
-                  className="bg-green-600 hover:bg-green-500 text-white p-1.5 rounded transition flex items-center justify-center w-7 h-7 disabled:opacity-50"
-                >
-                  ✅
-                </button>
-                <button 
-                  onClick={handleCancel}
-                  disabled={isUpdating}
-                  className="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded transition flex items-center justify-center w-7 h-7 disabled:opacity-50"
-                >
-                  ❌
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+       <div className="flex items-center gap-2">
+          {onAssign && (
+            <button 
+              onClick={() => propertyId && onAssign(propertyId, status === 'unassigned' ? notes : '')}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] font-bold px-2 py-1.5 rounded transition flex items-center justify-center shadow-sm whitespace-nowrap"
+            >
+              + Asignar
+            </button>
+          )}
+          {taskId && !isEditing && (
+            <button 
+              onClick={() => setIsEditing(true)}
+              disabled={isUpdating}
+              className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[12px] rounded transition flex items-center justify-center shadow-sm w-8 h-8 disabled:opacity-50"
+            >
+              ✏️
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* STATUS UPDATE MODAL (Flotante) */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-slate-800 border-t-4 border-yellow-400 rounded-xl p-5 w-full max-w-xs shadow-2xl">
+            <h3 className="text-[13px] font-bold text-slate-200 mb-3 uppercase tracking-widest">{(t as any).dashboard?.modals?.statusTitle || 'Actualizar Estatus'}</h3>
+            
+            {!showCustomInput ? (
+              <select 
+                value={selectedStatus}
+                onChange={(e) => {
+                  setSelectedStatus(e.target.value);
+                  if (e.target.value === 'OTHER') setShowCustomInput(true);
+                }}
+                className="w-full bg-slate-900 text-slate-200 text-[13px] px-3 py-2.5 rounded-lg outline-none border border-slate-600 mb-4 focus:border-yellow-400"
+              >
+                <option value="" disabled>Seleccionar...</option>
+                <option value="PENDING">{t.propertyCard.statusPending}</option>
+                <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
+                <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
+                <option value="OTHER">✍️ Otro...</option>
+              </select>
+            ) : (
+              <input 
+                type="text" 
+                value={customStatus}
+                onChange={(e) => setCustomStatus(e.target.value)}
+                placeholder="Especificar estado"
+                className="w-full bg-slate-900 border border-slate-600 text-slate-200 text-[13px] px-3 py-2.5 rounded-lg outline-none mb-4 focus:border-yellow-400"
+                autoFocus
+                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              />
+            )}
+
+            <div className="flex gap-2">
+              <button 
+                onClick={handleCancel}
+                disabled={isUpdating}
+                className="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 font-bold py-2 rounded-lg transition disabled:opacity-50"
+              >
+                {(t as any).dashboard?.modals?.cancel || 'Cancelar'}
+              </button>
+              <button 
+                onClick={handleSave}
+                disabled={isUpdating || (!selectedStatus && !customStatus)}
+                className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold py-2 rounded-lg transition disabled:opacity-50"
+              >
+                {isUpdating ? '...' : ((t as any).dashboard?.modals?.save || 'Guardar')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

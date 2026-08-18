@@ -5,9 +5,10 @@ import { useLanguage } from '@/context/LanguageContext';
 
 type PropertiesTabProps = {
   properties: any[];
+  onAssign?: (propId: string, desc?: string) => void;
 };
 
-export default function PropertiesTab({ properties }: PropertiesTabProps) {
+export default function PropertiesTab({ properties, onAssign }: PropertiesTabProps) {
   const { t } = useLanguage();
 
   return (
@@ -46,7 +47,16 @@ export default function PropertiesTab({ properties }: PropertiesTabProps) {
                         </Link>
                       </td>
                       <td className="p-3">{task.subcontractor.name} {task.subcontractor.company ? `/ ${task.subcontractor.company}` : ''}</td>
-                      <td className="p-3"><Badge type={visualStatus as any} text={badgeText} /></td>
+                      <td className="p-3 flex items-center gap-2">
+                        <button 
+                          onClick={() => onAssign && onAssign(prop.id)} 
+                          className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[10px] uppercase font-bold px-2 py-1 rounded transition whitespace-nowrap shadow-sm"
+                          title="Asignar nueva tarea a esta propiedad"
+                        >
+                          + Asignar
+                        </button>
+                        <Badge type={visualStatus as any} text={badgeText} />
+                      </td>
                       <td className="p-3 font-bold text-yellow-400">{formattedAmount}</td>
                     </tr>
                   );
@@ -77,16 +87,58 @@ export default function PropertiesTab({ properties }: PropertiesTabProps) {
                 const task = prop.tasks[0];
                 return (
                   <tr key={prop.id} className="hover:bg-slate-800 border-b border-slate-800 transition-colors">
-                    <td className="p-3">
-                      <Link href={`/admin/property/${prop.id}`} className="text-yellow-400 hover:underline font-bold">
-                        {prop.address}
-                      </Link>
-                    </td>
-                    <td className="p-3 text-slate-400">{task?.description || t.dashboard.messages.noTasks}</td>
-                    <td className="p-3"><Badge type="unassigned" text={t.badges.unassigned} /></td>
-                  </tr>
+                <td className="p-3">
+                  <Link href={`/admin/property/${prop.id}`} className="text-yellow-400 hover:underline font-bold">
+                    {prop.address}
+                  </Link>
+                </td>
+                <td className="p-3 text-slate-400">{task?.description || t.dashboard.messages.noTasks}</td>
+                <td className="p-3 flex items-center gap-2">
+                  <Badge type="unassigned" text={t.badges.unassigned} />
+                  <button onClick={() => onAssign && onAssign(prop.id, task?.description)} className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] px-2 py-1 rounded transition">
+                    + Asignar
+                  </button>
+                </td>
+              </tr>
                 );
               })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* RENDER 3: Propiedades Terminadas */}
+      <h2 className="text-[11px] font-bold uppercase tracking-[2px] text-slate-500 mb-4 pb-2 border-b border-slate-800 mt-8">
+        {(t as any).dashboard?.properties?.completed || 'Propiedades Terminadas'}
+      </h2>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse text-[13px]">
+          <thead>
+            <tr>
+              <th className="bg-slate-800 text-slate-500 text-[11px] font-bold uppercase tracking-[1px] p-3 border-b border-slate-700">{t.dashboard.table.property}</th>
+              <th className="bg-slate-800 text-slate-500 text-[11px] font-bold uppercase tracking-[1px] p-3 border-b border-slate-700">{t.dashboard.table.status}</th>
+              <th className="bg-slate-800 text-slate-500 text-[11px] font-bold uppercase tracking-[1px] p-3 border-b border-slate-700">Acción</th>
+            </tr>
+          </thead>
+          <tbody className="text-slate-300">
+            {properties.filter(p => p.status === 'COMPLETED').length === 0 ? (
+              <tr><td colSpan={3} className="p-3 text-slate-400 text-center">No hay propiedades terminadas.</td></tr>
+            ) : (
+              properties.filter(p => p.status === 'COMPLETED').map((prop) => (
+                <tr key={prop.id} className="hover:bg-slate-800 border-b border-slate-800 transition-colors">
+                  <td className="p-3">
+                    <Link href={`/admin/property/${prop.id}`} className="text-yellow-400 hover:underline font-bold">
+                      {prop.address}
+                    </Link>
+                  </td>
+                  <td className="p-3"><Badge type="completed" text="Terminada" /></td>
+                  <td className="p-3">
+                    <button onClick={() => onAssign && onAssign(prop.id)} className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] px-2 py-1 rounded transition">
+                      + Nueva Tarea
+                    </button>
+                  </td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>

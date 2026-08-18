@@ -7,6 +7,7 @@ import AssignmentsTab from '@/components/tabs/AssignmentsTab';
 import RosterTab from '@/components/tabs/RosterTab';
 import PropertiesTab from '@/components/tabs/PropertiesTab';
 import PastProjectsTab from '@/components/tabs/PastProjectsTab';
+import NewAssignmentModal from '@/components/NewAssignmentModal';
 import { getActiveAssignments, getContractors } from '@/actions/dashboardActions';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -16,6 +17,18 @@ export default function DashboardPage() {
   const [properties, setProperties] = useState<any[]>([]);
   const [contractors, setContractors] = useState<any[]>([]);
   const [rosterFilter, setRosterFilter] = useState<'approved' | 'notUsed' | 'all'>('approved');
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [defaultPropId, setDefaultPropId] = useState('');
+  const [defaultContractorId, setDefaultContractorId] = useState('');
+  const [defaultDesc, setDefaultDesc] = useState('');
+
+  const openAssignModal = (propId = '', contractorId = '', desc = '') => {
+    setDefaultPropId(propId);
+    setDefaultContractorId(contractorId);
+    setDefaultDesc(desc);
+    setIsModalOpen(true);
+  };
 
   const loadData = async () => {
     const data = await getActiveAssignments();
@@ -88,15 +101,23 @@ export default function DashboardPage() {
             properties={properties} 
             rosterFilter={rosterFilter} 
             setRosterFilter={setRosterFilter} 
+            onAssign={(contractorId) => openAssignModal('', contractorId)}
           />
         )}
 
         {activeTab === 'assignments' && (
-          <AssignmentsTab properties={properties} onUpdate={loadData} />
+          <AssignmentsTab 
+            properties={properties} 
+            onUpdate={loadData} 
+            onAssign={(propId, contractorId, desc) => openAssignModal(propId, contractorId, desc)}
+          />
         )}
 
         {activeTab === 'properties' && (
-          <PropertiesTab properties={properties} />
+          <PropertiesTab 
+            properties={properties} 
+            onAssign={(propId, desc) => openAssignModal(propId, undefined, desc)}
+          />
         )}
         
         {activeTab === 'pastprojects' && (
@@ -104,6 +125,18 @@ export default function DashboardPage() {
         )}
 
       </main>
+
+      {/* MODAL GLOBAL PARA NUEVAS ASIGNACIONES */}
+      <NewAssignmentModal 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        properties={properties}
+        contractors={contractors}
+        defaultPropertyId={defaultPropId}
+        defaultContractorId={defaultContractorId}
+        defaultDescription={defaultDesc}
+        onSuccess={loadData}
+      />
     </div>
   );
 }

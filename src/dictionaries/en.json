@@ -19,6 +19,15 @@
       "workingOn": "Currently Being Worked On",
       "unassigned": "Needs Contractor — Unassigned"
     },
+    "modals": {
+      "newAssignment": "New Assignment",
+      "selectProperty": "Select Property...",
+      "selectContractor": "Select Contractor...",
+      "taskDesc": "Task Description",
+      "cancel": "Cancel",
+      "assign": "Assign",
+      "statusTitle": "Update Status"
+    },
     "pastProjects": {
       "title": "Completed Jobs"
     },

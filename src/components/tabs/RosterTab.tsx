@@ -7,9 +7,10 @@ type RosterTabProps = {
   properties: any[];
   rosterFilter: 'approved' | 'notUsed' | 'all';
   setRosterFilter: (filter: 'approved' | 'notUsed' | 'all') => void;
+  onAssign?: (contractorId: string) => void;
 };
 
-export default function RosterTab({ contractors, properties, rosterFilter, setRosterFilter }: RosterTabProps) {
+export default function RosterTab({ contractors, properties, rosterFilter, setRosterFilter, onAssign }: RosterTabProps) {
   const { t } = useLanguage();
 
   const filteredContractors = contractors.filter(c => 
@@ -98,6 +99,7 @@ export default function RosterTab({ contractors, properties, rosterFilter, setRo
           return (
             <ContractorCard 
               key={contractor.id}
+              id={contractor.id}
               name={contractor.name} 
               company={contractor.company} 
               phone={contractor.whatsappNumber} 
@@ -106,6 +108,7 @@ export default function RosterTab({ contractors, properties, rosterFilter, setRo
               hasW9={contractor.hasW9} 
               historyType={historyType}
               historyItems={historyItems}
+              onAssign={onAssign}
             />
           );
         })}
