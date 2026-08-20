@@ -226,7 +226,12 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
   export async function createAssignment(propertyId: string, subcontractorId: string, description: string) {
     try {
       await prisma.task.create({
-        data: { propertyId, subcontractorId, description, status: 'PENDING' }
+        data: { 
+          propertyId, 
+          subcontractorId: subcontractorId || null, 
+          description, 
+          status: 'PENDING' 
+        }
       });
       
       // Actualizamos la propiedad a RENOVATING si estaba terminada o sin asignar
@@ -241,3 +246,72 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
       return { success: false, error: "Error interno" };
     }
   }
+
+export async function saveContractor(data: any) {
+  try {
+    if (data.id) {
+      await prisma.subcontractor.update({
+        where: { id: data.id },
+        data: {
+          name: data.name,
+          whatsappNumber: data.phone,
+          company: data.company || null,
+          email: data.email || null,
+          tradeSpecialty: data.specialty || null,
+          hasW9: data.hasW9,
+          status: data.status,
+        }
+      });
+    } else {
+      await prisma.subcontractor.create({
+        data: {
+          name: data.name,
+          whatsappNumber: data.phone,
+          company: data.company || null,
+          email: data.email || null,
+          tradeSpecialty: data.specialty || null,
+          hasW9: data.hasW9,
+          status: data.status,
+        }
+      });
+    }
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error saving contractor:", error);
+    if (error.code === 'P2002') {
+      return { success: false, error: "El número de WhatsApp ya está registrado." };
+    }
+    return { success: false, error: "Error interno al guardar en base de datos" };
+  }
+}
+
+export async function saveProperty(data: { address: string; taskDesc?: string; contractorId?: string }) {
+  try {
+    const property = await prisma.property.create({
+      data: {
+        address: data.address,
+        status: 'RENOVATING'
+      }
+    });
+
+    // Si se agrego una descripcion de tarea, la creamos y vinculamos a la propiedad
+    if (data.taskDesc) {
+      await prisma.task.create({
+        data: {
+          propertyId: property.id,
+          description: data.taskDesc,
+          subcontractorId: data.contractorId || null,
+          status: 'PENDING'
+        }
+      });
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error saving property:", error);
+    if (error.code === 'P2002') {
+      return { success: false, error: "La propiedad ya existe." };
+    }
+    return { success: false, error: "Error interno al guardar en base de datos" };
+  }
+}

@@ -47,7 +47,8 @@ export default function NewAssignmentModal({ isOpen, onClose, properties, contra
                 required
                 value={propertyId}
                 onChange={(e) => setPropertyId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-yellow-400"
+                disabled={!!defaultPropertyId}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <option value="" disabled>{(t as any).dashboard?.modals?.selectProperty || 'Seleccionar Propiedad...'}</option>
                 {properties.map((p: any) => (
@@ -60,12 +61,12 @@ export default function NewAssignmentModal({ isOpen, onClose, properties, contra
                 {t.dashboard.table.contractor}
               </label>
               <select 
-                required
                 value={contractorId}
                 onChange={(e) => setContractorId(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-yellow-400"
+                disabled={!!defaultContractorId}
+                className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-yellow-400 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <option value="" disabled>{(t as any).dashboard?.modals?.selectContractor || 'Seleccionar Contratista...'}</option>
+                <option value="">{(t as any).dashboard?.modals?.selectContractor || 'Seleccionar Contratista...'} (Opcional)</option>
                 {contractors.map((c: any) => (
                   <option key={c.id} value={c.id}>{c.name} {c.company ? `(${c.company})` : ''}</option>
                 ))}
@@ -79,7 +80,7 @@ export default function NewAssignmentModal({ isOpen, onClose, properties, contra
                 required
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ej. Pintura interior, reparar techo..."
+                placeholder={(t as any).dashboard?.modals?.taskDescPlaceholder || 'Ej. Pintura interior, reparar techo...'}
                 className="w-full bg-slate-900 border border-slate-600 rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:border-yellow-400 min-h-[80px]"
               />
             </div>
@@ -94,7 +95,7 @@ export default function NewAssignmentModal({ isOpen, onClose, properties, contra
               </button>
               <button 
                 type="submit"
-                disabled={isSubmitting || !propertyId || !contractorId || !description}
+                disabled={isSubmitting || !propertyId || !description}
                 className="flex-1 bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold py-2.5 rounded-lg transition disabled:opacity-50"
               >
                 {isSubmitting ? '...' : ((t as any).dashboard?.modals?.assign || 'Asignar')}

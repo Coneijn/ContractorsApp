@@ -25,15 +25,17 @@ export default function PastProjectsTab({ properties }: PastProjectsTabProps) {
               <th className="bg-slate-800 text-slate-500 text-[11px] font-bold uppercase tracking-[1px] p-3 border-b border-slate-700">{t.dashboard.table.date}</th>
             </tr>
           </thead>
-          <tbody className="text-slate-300">
+        <tbody className="text-slate-300">
             {properties.filter(p => p.status === 'COMPLETED').length === 0 ? (
               <tr><td colSpan={5} className="p-3 text-slate-400 text-center">{t.dashboard.messages.noCompleted}</td></tr>
             ) : (
               properties.filter(p => p.status === 'COMPLETED').flatMap(prop => 
-                prop.tasks.map((task: any) => {
-                  const amountInfo = prop.invoices?.find((i: any) => i.subcontractorId === task.subcontractorId)?.agreedAmount 
-                                    || prop.estimates?.find((e: any) => e.subcontractorId === task.subcontractorId)?.amount;
-                  const formattedAmount = amountInfo ? `$${Number(amountInfo).toLocaleString('en-US')}` : 'TBD';
+                prop.tasks.map((task: any) => ({ prop, task }))
+              )
+              .sort((a, b) => new Date(b.task.updatedAt || 0).getTime() - new Date(a.task.updatedAt || 0).getTime())
+              .map(({ prop, task }: any) => {
+                const amountInfo = prop.invoices?.find((i: any) => i.subcontractorId === task.subcontractorId)?.agreedAmount
+                                     || prop.estimates?.find((e: any) => e.subcontractorId === task.subcontractorId)?.amount;                  const formattedAmount = amountInfo ? `$${Number(amountInfo).toLocaleString('en-US')}` : 'TBD';
 
                   // Lógica para que coincida exactamente con las fechas del HTML estático original
                   const taskDate = new Date(task.updatedAt);
@@ -61,8 +63,7 @@ export default function PastProjectsTab({ properties }: PastProjectsTabProps) {
                       <td className="p-3 text-slate-400">{formattedDate}</td>
                     </tr>
                   );
-                })
-              )
+              })
             )}
           </tbody>
         </table>

@@ -8,17 +8,23 @@ import RosterTab from '@/components/tabs/RosterTab';
 import PropertiesTab from '@/components/tabs/PropertiesTab';
 import PastProjectsTab from '@/components/tabs/PastProjectsTab';
 import NewAssignmentModal from '@/components/NewAssignmentModal';
+import AddContractorModal from '@/components/AddContractorModal';
+import AddPropertyModal from '@/components/AddPropertyModal';
 import { getActiveAssignments, getContractors } from '@/actions/dashboardActions';
 import { useLanguage } from '@/context/LanguageContext';
 
 export default function DashboardPage() {
   const { t, language, setLanguage } = useLanguage();
+
   const [activeTab, setActiveTab] = useState('assignments');
   const [properties, setProperties] = useState<any[]>([]);
   const [contractors, setContractors] = useState<any[]>([]);
   const [rosterFilter, setRosterFilter] = useState<'approved' | 'notUsed' | 'all'>('approved');
-
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isContractorModalOpen, setIsContractorModalOpen] = useState(false);
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = useState(false);
+  
   const [defaultPropId, setDefaultPropId] = useState('');
   const [defaultContractorId, setDefaultContractorId] = useState('');
   const [defaultDesc, setDefaultDesc] = useState('');
@@ -96,12 +102,13 @@ export default function DashboardPage() {
       <main className="max-w-[1100px] mx-auto p-6">
         
         {activeTab === 'roster' && (
-          <RosterTab 
-            contractors={contractors} 
-            properties={properties} 
-            rosterFilter={rosterFilter} 
-            setRosterFilter={setRosterFilter} 
-            onAssign={(contractorId) => openAssignModal('', contractorId)}
+          <RosterTab
+             contractors={contractors}
+             properties={properties}
+             rosterFilter={rosterFilter}
+             setRosterFilter={setRosterFilter}
+             onAssign={(contractorId) => openAssignModal('', contractorId)}
+             onAddContractor={() => setIsContractorModalOpen(true)}
           />
         )}
 
@@ -117,24 +124,38 @@ export default function DashboardPage() {
           <PropertiesTab 
             properties={properties} 
             onAssign={(propId, desc) => openAssignModal(propId, undefined, desc)}
+            onAddProperty={() => setIsPropertyModalOpen(true)}
           />
         )}
         
         {activeTab === 'pastprojects' && (
           <PastProjectsTab properties={properties} />
         )}
-
       </main>
 
-      {/* MODAL GLOBAL PARA NUEVAS ASIGNACIONES */}
-      <NewAssignmentModal 
+      {/* MODALES GLOBALES */}
+      <NewAssignmentModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        properties={properties}
+          onClose={() => setIsModalOpen(false)}
+          properties={properties}
+          contractors={contractors}
+          defaultPropertyId={defaultPropId}
+          defaultContractorId={defaultContractorId}
+          defaultDescription={defaultDesc}
+          onSuccess={loadData}
+        />
+
+        <AddContractorModal
+        isOpen={isContractorModalOpen}
+        onClose={() => setIsContractorModalOpen(false)}
         contractors={contractors}
-        defaultPropertyId={defaultPropId}
-        defaultContractorId={defaultContractorId}
-        defaultDescription={defaultDesc}
+        onSuccess={loadData}
+      />
+
+      <AddPropertyModal
+        isOpen={isPropertyModalOpen}
+        onClose={() => setIsPropertyModalOpen(false)}
+        contractors={contractors}
         onSuccess={loadData}
       />
     </div>

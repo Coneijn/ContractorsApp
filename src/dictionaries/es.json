@@ -13,20 +13,47 @@
       "title": "Contratistas Activos / Aprobados"
     },
     "assignments": {
-      "title": "Propiedades y Asignaciones (Base de Datos)"
+      "title": "Propiedades y Asignaciones"
     },
     "properties": {
       "workingOn": "Actualmente en Progreso",
-      "unassigned": "Necesita Contratista — Sin Asignar"
+      "unassigned": "Necesita Contratista   Sin Asignar",
+      "completed": "Propiedades sin tareas"
     },
+    "buttons": {
+      "newTask": "+ Nueva Tarea",
+      "newTaskTitle": "Asignar nueva tarea a esta propiedad",
+      "assignContractor": "+ Asignar Contratista"
+    },
+   
     "modals": {
       "newAssignment": "Nueva Asignación",
       "selectProperty": "Seleccionar Propiedad...",
       "selectContractor": "Seleccionar Contratista...",
       "taskDesc": "Descripción de la tarea",
+      "taskDescPlaceholder": "Ej. Pintura interior, reparar techo...",
       "cancel": "Cancelar",
       "assign": "Asignar",
-      "statusTitle": "Actualizar Estatus"
+      "statusTitle": "Actualizar Estatus",
+      "addContractor": {
+        "titleNew": "Agregar / Editar Contratista",
+        "selectExisting": "Selecciona uno existente (o deja en blanco para nuevo)",
+        "name": "Nombre Completo *",
+        "phone": "Número de WhatsApp *",
+        "company": "Empresa",
+        "email": "Correo Electrónico",
+        "specialty": "Especialidad (ej. Plomería)",
+        "status": "Estatus",
+        "w9": " Tiene W-9 en archivo?",
+        "save": "Guardar Contratista"
+      },
+      "addProperty": {
+        "title": "Agregar Nueva Propiedad",
+        "address": "Direccion de la Propiedad *",
+        "taskDesc": "Descripcion de Tarea (Opcional)",
+        "contractor": "Asignar Contratista (Opcional)",
+        "save": "Guardar Propiedad"
+      }
     },
     "pastProjects": {
       "title": "Trabajos Completados"
@@ -38,7 +65,8 @@
       "amount": "Monto",
       "notes": "Notas",
       "scope": "Alcance",
-      "date": "Fecha"
+      "date": "Fecha",
+      "action": "Acción"
     },
     "messages": {
       "loading": "Cargando propiedades...",
@@ -51,14 +79,15 @@
   "propertyCard": {
     "statusPending": "📋 Programar",
     "statusInProgress": "🔨 En Progreso",
-    "statusCompleted": "✅ Completar"
+    "statusCompleted": "✅ Completado"
   },
   "badges": {
-    "inProgress": "🔨 En Progreso",
-    "scheduled": "📋 Programado",
-    "pending": "💬 Cotización Pendiente",
-    "queued": "⏳ En Espera",
-    "unassigned": "⚠️ Sin Asignar"
+    "inProgress": "  En Progreso",
+    "scheduled": "  Programado",
+    "pending": "  Cotizaci n Pendiente",
+    "queued": "  En Espera",
+    "unassigned": "  Sin Asignar",
+    "completedBadge": "Terminada"
   },
   "policy": {
     "submit": "Enviar Factura →",
@@ -141,5 +170,75 @@
     "successInvoiceDesc": "Gracias. Tu factura ha sido recibida. Si fue enviada antes del miércoles a las 5 PM y el trabajo se verifica completo el jueves, tu cheque estará listo el viernes.",
     "successEstimateDesc": "Gracias. Tu cotización ha sido recibida. Spencer la revisará y te contactará pronto.",
     "questions": "¿Preguntas? WhatsApp (901) 318-1736 o correo admin@volunteerbuyers.com"
+  },
+  "propertyDetail": {
+    "loading": "Cargando propiedad...",
+    "notFound": "Propiedad no encontrada.",
+    "backDashboard": "Volver al Dashboard",
+    "dbStatus": "Estatus BD:",
+    "pendingDocs": "Docs Pendientes",
+    "latestUpdate": "Última Actualización",
+    "propertySpecs": "Especificaciones",
+    "propertyDetails": "Detalles de la Propiedad",
+    "loanTerms": "Términos del Préstamo",
+    "noLoanDetails": "Sin detalles de préstamo registrados.",
+    "conditionNotes": "Notas de Condición / Recorrido",
+    "closingChecklist": "Lista de Cierre / Flujo de Trabajo",
+    "documents": "Documentos",
+    "noDocuments": "No hay documentos.",
+    "progressLog": "Bitácora de Progreso",
+    "noActivity": "Sin actividad registrada aún.",
+    "media": "Multimedia: Fotos y Videos",
+    "videos": "Videos",
+    "photos": "Fotos",
+    "noMedia": "Sin multimedia subida.",
+    "specs": {
+      "beds": "Habitaciones",
+      "baths": "Baños",
+      "sqft": "Pies Cuadrados",
+      "built": "Construcción",
+      "avm": "Valor Estimado",
+      "estRent": "Renta Estimada",
+      "address": "Dirección",
+      "county": "Condado",
+      "seller": "Vendedor",
+      "buyer": "Comprador",
+      "type": "Tipo de Propiedad",
+      "lockbox": "Caja de Llaves / Código",
+      "purchasePrice": "Precio de Compra",
+      "strategy": "Estrategia",
+      "status": "Estatus",
+      "lender": "Prestamista",
+      "loanAmount": "Monto del Préstamo",
+      "interestRate": "Tasa de Interés",
+      "monthlyPmt": "Pago Mensual",
+      "maturityDate": "Fecha de Vencimiento",
+      "holdback": "Retención",
+      "cashToClose": "Efectivo para Cierre"
+    }
+  },
+  "common": {
+    "assign": "+ Asignar",
+    "other": "Otro...",
+    "select": "Seleccionar...",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "newContractor": "-- Nuevo Contratista --",
+    "optional": "(Opcional)"
+  },
+  "flyer": {
+    "subtitle": "Volunteer Homes, LLC | SpencerBuysHouses.com",
+    "title1": "Enviar Factura o Cotización",
+    "scanQr": "Escanea el código QR",
+    "scanText1": "Escanea para enviar tu factura o cotización",
+    "rules": {
+      "r1": "Límite: Miércoles a las 5:00 PM",
+      "r2": "El trabajo debe estar 100% completo",
+      "r3": "Incluye fotos y videos del trabajo terminado",
+      "r4": "Sé específico - lista cada tarea y material",
+      "r5": "W-9 requerido antes del primer pago",
+      "r6": "Cheques emitidos los viernes tras revisión"
+    },
+    "questions": "¿Preguntas? WhatsApp (901) 318-1736 | admin@volunteerbuyers.com"
   }
 }

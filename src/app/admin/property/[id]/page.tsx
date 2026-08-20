@@ -1,10 +1,10 @@
 "use client";
-
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getPropertyById } from '@/actions/dashboardActions';
+import { useLanguage } from '@/context/LanguageContext';
 
-// --- SUB-COMPONENTES PARA MANTENER EL CÓDIGO LIMPIO ---
+// --- SUB-COMPONENTES PARA MANTENER EL CODIGO LIMPIO ---
 
 function BannerItem({ label, value, sub, highlight = false }: { label: string, value: string | number, sub: string, highlight?: boolean }) {
   return (
@@ -51,9 +51,11 @@ function TableRow({ lbl, val, isBold = false }: { lbl: string, val: React.ReactN
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const propertyId = resolvedParams.id;
+  const { t } = useLanguage() as any;
+  const pt = t.propertyDetail || {};
+  
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-
   const [checklist, setChecklist] = useState({
     psa: true,
     alta: false,
@@ -72,14 +74,14 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     loadData();
   }, [propertyId]);
 
-  const toggleCheck = (key: keyof typeof checklist) => {
+ const toggleCheck = (key: keyof typeof checklist) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-yellow-400 font-bold">Cargando propiedad...</div>;
-  if (!property) return <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-300"><p className="mb-4">Propiedad no encontrada.</p><Link href="/admin/dashboard" className="text-yellow-400 font-bold hover:underline">Volver al Dashboard</Link></div>;
+  if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-yellow-400 font-bold">{pt.loading || 'Loading...'}</div>;
 
-  // Lógica de datos (Preparando para cuando agregues estos campos a la BD)
+  if (!property) return <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-300"><p className="mb-4">{pt.notFound || 'Not found'}</p><Link href="/admin/dashboard" className="text-yellow-400 font-bold hover:underline">{pt.backDashboard || 'Back'}</Link></div>;
+  // Logica de datos (Preparando para cuando agregues estos campos a la BD)
   const latestUpdate = property.activityLogs?.length > 0 ? property.activityLogs[0] : null;
   const totalRehabBudget = property.estimates?.filter((e: any) => e.status === 'APPROVED').reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
   
@@ -111,7 +113,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             {/* BADGES */}
             <div className="flex flex-wrap gap-2 mt-3">
               <span className="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-full text-[11px] font-bold">
-                Estatus BD: {property.status}
+                {pt.dbStatus || 'Status:'} {property.status}
               </span>
               {/* Badges Condicionales (Mock para el futuro) */}
               {property.strategy === 'Rental' && <span className="px-3 py-1 bg-green-950 text-green-400 border border-green-900 rounded-full text-[11px] font-bold">🏘️ Rental</span>}
@@ -125,8 +127,8 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       {/* FINANCIAL BANNER */}
       <div className="bg-slate-950 border-b border-slate-800 mb-6 flex flex-wrap">
         <div className="max-w-[960px] mx-auto w-full flex flex-wrap">
-          <BannerItem label="Purchase Price" value={property.purchasePrice ? `$${property.purchasePrice.toLocaleString()}` : 'TBD'} sub={property.seller || 'Pending Docs'} />
-          <BannerItem label="AVM" value={property.avm ? `$${property.avm.toLocaleString()}` : 'TBD'} sub="RentCast" />
+          <BannerItem label={pt.specs?.purchasePrice || "Purchase Price"} value={property.purchasePrice ? `$${property.purchasePrice.toLocaleString()}` : 'TBD'} sub={property.seller || (pt.pendingDocs || 'Pending')} />
+          <BannerItem label={pt.specs?.avm || "AVM"} value={property.avm ? `$${property.avm.toLocaleString()}` : 'TBD'} sub="RentCast" />
           <BannerItem label="Rehab Budget" value={totalRehabBudget > 0 ? `$${totalRehabBudget.toLocaleString()}` : 'TBD'} sub="Estimates Approved" />
           <BannerItem label="Close Date" value={property.closeDate || 'TBD'} sub={property.status} />
         </div>
@@ -134,10 +136,10 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
       {/* MAIN CONTAINER */}
       <div className="max-w-[960px] mx-auto p-4">
-
+        
         {/* LATEST UPDATE */}
         {latestUpdate && (
-          <SectionCard title="Latest Update">
+          <SectionCard title={pt.latestUpdate || "Latest Update"}>
             <div className="bg-blue-950/30 border-l-4 border-blue-500 rounded-r-lg p-4">
               <div className="flex justify-between items-center mb-2">
                 <div className="font-bold text-[13px] text-blue-400">{latestUpdate.action}</div>
@@ -151,54 +153,54 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         )}
 
         {/* PROPERTY SPECS */}
-        <SectionCard title="Property Specs">
+        <SectionCard title={pt.propertySpecs || "Property Specs"}>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
-            <SpecBox val={property.beds || 'TBD'} lbl="Beds" />
-            <SpecBox val={property.baths || 'TBD'} lbl="Baths" />
-            <SpecBox val={property.sqft ? property.sqft.toLocaleString() : 'TBD'} lbl="SqFt" />
-            <SpecBox val={property.yearBuilt || 'TBD'} lbl="Built" />
-            <SpecBox val={property.avm ? `$${property.avm.toLocaleString()}` : 'TBD'} lbl="AVM" />
-            <SpecBox val={property.estRent ? `$${property.estRent}/mo` : 'TBD'} lbl="Est. Rent" />
+            <SpecBox val={property.beds || 'TBD'} lbl={pt.specs?.beds || "Beds"} />
+            <SpecBox val={property.baths || 'TBD'} lbl={pt.specs?.baths || "Baths"} />
+            <SpecBox val={property.sqft ? property.sqft.toLocaleString() : 'TBD'} lbl={pt.specs?.sqft || "SqFt"} />
+            <SpecBox val={property.yearBuilt || 'TBD'} lbl={pt.specs?.built || "Built"} />
+            <SpecBox val={property.avm ? `$${property.avm.toLocaleString()}` : 'TBD'} lbl={pt.specs?.avm || "AVM"} />
+            <SpecBox val={property.estRent ? `$${property.estRent}/mo` : 'TBD'} lbl={pt.specs?.estRent || "Est. Rent"} />
           </div>
         </SectionCard>
 
         {/* DETAILS & LOAN (2 Columns on Desktop) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <SectionCard title="Property Details">
+          <SectionCard title={pt.propertyDetails || "Property Details"}>
             <table className="w-full border-collapse">
               <tbody>
-                <TableRow lbl="Address" val={property.address} isBold />
-                <TableRow lbl="County" val={property.county || 'TBD'} />
-                <TableRow lbl="Seller" val={property.seller || 'TBD'} />
-                <TableRow lbl="Buyer" val={property.buyer || 'Volunteer Homes, LLC'} />
-                <TableRow lbl="Property Type" val={property.propertyType || 'Single Family'} />
-                <TableRow lbl="Lockbox / Code" val={property.accessCodeOrLockbox || 'N/A'} isBold />
-                <TableRow lbl="Purchase Price" val={property.purchasePrice ? `$${property.purchasePrice.toLocaleString()}` : 'TBD'} />
-                <TableRow lbl="Strategy" val={property.strategy || 'TBD'} />
-                <TableRow lbl="Status" val={property.status} isBold />
+                <TableRow lbl={pt.specs?.address || "Address"} val={property.address} isBold />
+                <TableRow lbl={pt.specs?.county || "County"} val={property.county || 'TBD'} />
+                <TableRow lbl={pt.specs?.seller || "Seller"} val={property.seller || 'TBD'} />
+                <TableRow lbl={pt.specs?.buyer || "Buyer"} val={property.buyer || 'Volunteer Homes, LLC'} />
+                <TableRow lbl={pt.specs?.type || "Property Type"} val={property.propertyType || 'Single Family'} />
+                <TableRow lbl={pt.specs?.lockbox || "Lockbox / Code"} val={property.accessCodeOrLockbox || 'N/A'} isBold />
+                <TableRow lbl={pt.specs?.purchasePrice || "Purchase Price"} val={property.purchasePrice ? `$${property.purchasePrice.toLocaleString()}` : 'TBD'} />
+                <TableRow lbl={pt.specs?.strategy || "Strategy"} val={property.strategy || 'TBD'} />
+                <TableRow lbl={pt.specs?.status || "Status"} val={property.status} isBold />
               </tbody>
             </table>
           </SectionCard>
 
           {/* LOAN TERMS CONDICIONAL */}
           {(property.loanLender || property.loanAmount) ? (
-            <SectionCard title="Loan Terms">
+            <SectionCard title={pt.loanTerms || "Loan Terms"}>
               <table className="w-full border-collapse">
                 <tbody>
-                  <TableRow lbl="Lender" val={property.loanLender} isBold />
-                  <TableRow lbl="Loan Amount" val={`$${property.loanAmount.toLocaleString()}`} />
-                  <TableRow lbl="Interest Rate" val={property.loanRate} />
-                  <TableRow lbl="Monthly Pmt" val={`$${property.loanMonthly}`} />
-                  <TableRow lbl="Maturity Date" val={<span className="text-orange-400 font-bold">⚠️ {property.loanMaturity}</span>} />
-                  <TableRow lbl="Holdback" val={property.loanHoldback ? `$${property.loanHoldback.toLocaleString()}` : 'N/A'} />
-                  <TableRow lbl="Cash to Close" val={property.loanCashToClose ? `$${property.loanCashToClose.toLocaleString()}` : 'TBD'} />
+                  <TableRow lbl={pt.specs?.lender || "Lender"} val={property.loanLender} isBold />
+                  <TableRow lbl={pt.specs?.loanAmount || "Loan Amount"} val={`$${property.loanAmount.toLocaleString()}`} />
+                  <TableRow lbl={pt.specs?.interestRate || "Interest Rate"} val={property.loanRate} />
+                  <TableRow lbl={pt.specs?.monthlyPmt || "Monthly Pmt"} val={`$${property.loanMonthly}`} />
+                  <TableRow lbl={pt.specs?.maturityDate || "Maturity Date"} val={<span className="text-orange-400 font-bold">🗓 {property.loanMaturity}</span>} />
+                  <TableRow lbl={pt.specs?.holdback || "Holdback"} val={property.loanHoldback ? `$${property.loanHoldback.toLocaleString()}` : 'N/A'} />
+                  <TableRow lbl={pt.specs?.cashToClose || "Cash to Close"} val={property.loanCashToClose ? `$${property.loanCashToClose.toLocaleString()}` : 'TBD'} />
                 </tbody>
               </table>
             </SectionCard>
           ) : (
-            <SectionCard title="Loan Terms">
+            <SectionCard title={pt.loanTerms || "Loan Terms"}>
               <div className="text-center text-slate-500 py-6 text-sm">
-                No loan details registered yet.
+                {pt.noLoanDetails || "No loan details registered yet."}
               </div>
             </SectionCard>
           )}
@@ -206,7 +208,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
         {/* CONDITION NOTES (Condicional) */}
         {property.conditionNotes && property.conditionNotes.length > 0 && (
-          <SectionCard title="Condition Notes — Walkthrough">
+          <SectionCard title={pt.conditionNotes || "Condition Notes / Walkthrough"}>
             <table className="w-full border-collapse">
               <tbody>
                 {property.conditionNotes.map((note: any, idx: number) => (
@@ -218,7 +220,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         )}
 
         {/* CLOSING CHECKLIST */}
-        <SectionCard title="Closing / Workflow Checklist">
+        <SectionCard title={pt.closingChecklist || "Closing / Workflow Checklist"}>
           <div className="space-y-1">
             {[
               { id: 'psa', label: 'PSA signed', role: 'Pam' },
@@ -246,24 +248,24 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         </SectionCard>
 
         {/* DOCUMENTS */}
-        <SectionCard title={`Documents (${docs.length})`}>
+        <SectionCard title={`${pt.documents || 'Documents'} (${docs.length})`}>
           {docs.length > 0 ? (
             <ul className="space-y-2">
               {docs.map((doc: any, idx: number) => (
                 <li key={idx} className="border-b border-slate-700/50 pb-2 last:border-0 last:pb-0">
                   <a href={doc.url} target="_blank" className="text-blue-400 hover:text-blue-300 text-[13px] font-medium transition flex items-center gap-2">
-                    📄 {doc.title}
+                      {doc.title}
                   </a>
                 </li>
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-slate-500">No documents on file.</p>
+            <p className="text-xs text-slate-500">{pt.noDocuments || "No documents on file."}</p>
           )}
         </SectionCard>
 
         {/* PROGRESS LOG */}
-        <SectionCard title="Progress Log">
+        <SectionCard title={pt.progressLog || "Progress Log"}>
           {property.activityLogs?.length > 0 ? (
             <ul className="space-y-3">
               {property.activityLogs.map((log: any) => (
@@ -278,16 +280,16 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               ))}
             </ul>
           ) : (
-            <p className="text-xs text-slate-500">No activity logged yet.</p>
+            <p className="text-xs text-slate-500">{pt.noActivity || "No activity logged yet."}</p>
           )}
         </SectionCard>
 
         {/* MEDIA: PHOTOS & VIDEOS */}
-        <SectionCard title={`Media: Photos (${photos.length}) & Videos (${videos.length})`}>
+        <SectionCard title={`${pt.media || 'Media: Photos & Videos'} (${photos.length + videos.length})`}>
           {/* VIDEOS */}
           {videos.length > 0 && (
             <div className="mb-6">
-              <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">📹 Videos</h3>
+              <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">🎥 {pt.videos || 'Videos'}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
                 {videos.map((vid: any) => (
                   <a key={vid.id} href={vid.fileUrl} target="_blank" className="relative group block rounded-lg overflow-hidden border border-slate-600 bg-slate-900 aspect-video">
@@ -302,7 +304,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           {/* PHOTOS */}
           {photos.length > 0 ? (
             <div>
-              <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">📷 Photos</h3>
+              <h3 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider">📸 {pt.photos || 'Photos'}</h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {photos.map((pic: any) => (
                   <a key={pic.id} href={pic.fileUrl} target="_blank" className="block rounded-lg overflow-hidden border border-slate-600 bg-slate-900 aspect-square">
@@ -312,7 +314,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               </div>
             </div>
           ) : (
-             <p className="text-xs text-slate-500">No media uploaded.</p>
+             <p className="text-xs text-slate-500">{pt.noMedia || "No media uploaded."}</p>
           )}
         </SectionCard>
 

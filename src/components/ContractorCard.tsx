@@ -1,5 +1,6 @@
 import React from 'react';
 import Badge from './Badge';
+import { useLanguage } from '@/context/LanguageContext';
 
 export type HistoryItem = {
   address?: string;
@@ -21,6 +22,8 @@ type ContractorProps = {
 };
 
 export default function ContractorCard({ id, name, company, phone, email, area, hasW9, historyType, historyItems, onAssign }: ContractorProps) {
+  const { t } = useLanguage() as any;
+  
   return (
     <div className="bg-slate-800 rounded-xl p-5 border border-slate-700 transition hover:border-yellow-400 flex flex-col relative">
       
@@ -29,7 +32,7 @@ export default function ContractorCard({ id, name, company, phone, email, area, 
           onClick={() => onAssign(id)}
           className="absolute top-4 right-4 bg-slate-700 hover:bg-slate-600 text-yellow-400 text-[11px] font-bold px-3 py-1.5 rounded-lg transition shadow-sm"
         >
-          + Asignar
+          {t.common?.assign || '+ Assign'}
         </button>
       )}
 
@@ -66,17 +69,19 @@ export default function ContractorCard({ id, name, company, phone, email, area, 
 
       <hr className="border-t border-slate-700 my-3" />
 
-      {/* Historial Dinámico */}
-      <div className="flex-1">
+      {/* Historial Dinamico */}
+      <div className="flex-1 flex flex-col min-h-0">
         <div className="text-[10px] font-bold uppercase tracking-[1px] text-slate-500 mb-2">{historyType}</div>
         
-        {historyItems.map((item, idx) => (
-          <div key={idx} className="bg-slate-900 rounded-md p-2.5 mb-1.5">
-            {item.address && <div className="text-xs font-bold text-slate-200">{item.address}</div>}
+        <div className="overflow-y-auto max-h-[160px] pr-1 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
+          {historyItems.map((item, idx) => (
+            <div key={idx} className="bg-slate-900 rounded-md p-2.5 mb-1.5">
+              {item.address && <div className="text-xs font-bold text-slate-200">{item.address}</div>}
             <div className="text-[11px] text-slate-400 mt-0.5 leading-snug">{item.detail}</div>
             {item.price && <div className="text-[13px] font-extrabold text-yellow-400 mt-1">{item.price}</div>}
-          </div>
-        ))}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

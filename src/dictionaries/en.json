@@ -13,20 +13,46 @@
       "title": "Active / Approved Contractors"
     },
     "assignments": {
-      "title": "Properties & Assignments (Live Database)"
+      "title": "Properties & Assignments"
     },
     "properties": {
       "workingOn": "Currently Being Worked On",
-      "unassigned": "Needs Contractor — Unassigned"
+      "unassigned": "Needs Contractor   Unassigned",
+      "completed": "No task properties"
+    },
+    "buttons": {
+      "newTask": "+ New Task",
+      "newTaskTitle": "Assign new task to this property",
+      "assignContractor": "+ Assign Contractor"
     },
     "modals": {
       "newAssignment": "New Assignment",
       "selectProperty": "Select Property...",
       "selectContractor": "Select Contractor...",
       "taskDesc": "Task Description",
+      "taskDescPlaceholder": "e.g. Interior paint, roof repair...",
       "cancel": "Cancel",
       "assign": "Assign",
-      "statusTitle": "Update Status"
+      "statusTitle": "Update Status",
+      "addContractor": {
+        "titleNew": "Add / Edit Contractor",
+        "selectExisting": "Select existing (or leave blank for new)",
+        "name": "Full Name *",
+        "phone": "WhatsApp Number *",
+        "company": "Company Name",
+        "email": "Email",
+        "specialty": "Trade Specialty",
+        "status": "Status",
+        "w9": "Has W-9 on file?",
+        "save": "Save Contractor"
+      },
+      "addProperty": {
+        "title": "Add New Property",
+        "address": "Property Address *",
+        "taskDesc": "Task Description (Optional)",
+        "contractor": "Assign Contractor (Optional)",
+        "save": "Save Property"
+      }
     },
     "pastProjects": {
       "title": "Completed Jobs"
@@ -38,7 +64,8 @@
       "amount": "Amount",
       "notes": "Notes",
       "scope": "Scope",
-      "date": "Date"
+      "date": "Date",
+      "action": "Action"
     },
     "messages": {
       "loading": "Loading properties...",
@@ -54,11 +81,12 @@
     "statusCompleted": "✅ Complete"
   },
   "badges": {
-    "inProgress": "🔨 In Progress",
-    "scheduled": "📋 Scheduled",
-    "pending": "💬 Quote Pending",
-    "queued": "⏳ Queued",
-    "unassigned": "⚠️ Unassigned"
+    "inProgress": "  In Progress",
+    "scheduled": "  Scheduled",
+    "pending": "  Quote Pending",
+    "queued": "  Queued",
+    "unassigned": "  Unassigned",
+    "completedBadge": "Completed"
   },
   "policy": {
     "submit": "Submit Invoice →",
@@ -141,5 +169,75 @@
     "successInvoiceDesc": "Thank you. Your invoice has been received. If submitted by Wednesday at 5 PM and work is verified complete on Thursday, your check will be ready Friday.",
     "successEstimateDesc": "Thank you. Your estimate has been received. Spencer will review it and contact you soon.",
     "questions": "Questions? WhatsApp (901) 318-1736 or email admin@volunteerbuyers.com"
+  },
+  "propertyDetail": {
+    "loading": "Loading property...",
+    "notFound": "Property not found.",
+    "backDashboard": "Back to Dashboard",
+    "dbStatus": "DB Status:",
+    "pendingDocs": "Pending Docs",
+    "latestUpdate": "Latest Update",
+    "propertySpecs": "Property Specs",
+    "propertyDetails": "Property Details",
+    "loanTerms": "Loan Terms",
+    "noLoanDetails": "No loan details registered yet.",
+    "conditionNotes": "Condition Notes / Walkthrough",
+    "closingChecklist": "Closing / Workflow Checklist",
+    "documents": "Documents",
+    "noDocuments": "No documents on file.",
+    "progressLog": "Progress Log",
+    "noActivity": "No activity logged yet.",
+    "media": "Media: Photos & Videos",
+    "videos": "Videos",
+    "photos": "Photos",
+    "noMedia": "No media uploaded.",
+    "specs": {
+      "beds": "Beds",
+      "baths": "Baths",
+      "sqft": "SqFt",
+      "built": "Built",
+      "avm": "AVM",
+      "estRent": "Est. Rent",
+      "address": "Address",
+      "county": "County",
+      "seller": "Seller",
+      "buyer": "Buyer",
+      "type": "Property Type",
+      "lockbox": "Lockbox / Code",
+      "purchasePrice": "Purchase Price",
+      "strategy": "Strategy",
+      "status": "Status",
+      "lender": "Lender",
+      "loanAmount": "Loan Amount",
+      "interestRate": "Interest Rate",
+      "monthlyPmt": "Monthly Pmt",
+      "maturityDate": "Maturity Date",
+      "holdback": "Holdback",
+      "cashToClose": "Cash to Close"
+    }
+  },
+  "common": {
+    "assign": "+ Assign",
+    "other": "Other...",
+    "select": "Select...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "newContractor": "-- New Contractor --",
+    "optional": "(Optional)"
+  },
+  "flyer": {
+    "subtitle": "Volunteer Homes, LLC | SpencerBuysHouses.com",
+    "title1": "Send Invoice or Estimate",
+    "scanQr": "Scan QR Code",
+    "scanText1": "Scan to send your invoice or estimate",
+    "rules": {
+      "r1": "Deadline: Wednesday at 5:00 PM",
+      "r2": "Work must be 100% complete before submitting",
+      "r3": "Include photos & videos of completed work",
+      "r4": "Be specific - list every task and material",
+      "r5": "W-9 required before first payment",
+      "r6": "Checks issued Fridays after Thursday walkthrough"
+    },
+    "questions": "Questions? WhatsApp (901) 318-1736 | admin@volunteerbuyers.com"
   }
 }

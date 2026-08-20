@@ -94,7 +94,7 @@ const [isUpdating, setIsUpdating] = useState(false);
               onClick={() => propertyId && onAssign(propertyId, status === 'unassigned' ? notes : '')}
               className="bg-slate-700 hover:bg-slate-600 text-slate-200 text-[11px] font-bold px-2 py-1.5 rounded transition flex items-center justify-center shadow-sm whitespace-nowrap"
             >
-              + Asignar
+              {t.common?.assign || '+ Assign'}
             </button>
           )}
           {taskId && !isEditing && (
@@ -124,11 +124,11 @@ const [isUpdating, setIsUpdating] = useState(false);
                 }}
                 className="w-full bg-slate-900 text-slate-200 text-[13px] px-3 py-2.5 rounded-lg outline-none border border-slate-600 mb-4 focus:border-yellow-400"
               >
-                <option value="" disabled>Seleccionar...</option>
+                <option value="" disabled>{t.common?.select || 'Select...'}</option>
                 <option value="PENDING">{t.propertyCard.statusPending}</option>
                 <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
                 <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
-                <option value="OTHER">✍️ Otro...</option>
+                <option value="OTHER">⚡ {t.common?.other || 'Other...'}</option>
               </select>
             ) : (
               <input 
