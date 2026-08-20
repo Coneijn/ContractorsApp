@@ -49,7 +49,20 @@ export async function POST(req: Request) {
     let targetPropertyId = propertyId;
 
     // 3. LÓGICA POR OBJETIVO (TARGET)
-    if (target === 'TASK') {
+    if (target === 'CREATE_PROPERTY') {
+      // ✅ Creación de Propiedades (Devolverá el ID generado)
+      const propertyData: any = { ...propertyUpdates };
+      if (newStatus) propertyData.status = newStatus as PropertyStatus;
+
+      const newProperty = await prisma.property.create({
+        data: propertyData
+      });
+
+      targetPropertyId = newProperty.id; // Lo guardamos para el ActivityLog y el Response
+      actionPerformed = `ADMIN_PROPERTY_CREATED`;
+      actionDescription = `El agente creó una nueva propiedad en el sistema.`;
+
+    } else if (target === 'TASK') {
       // ✅ Gestión completa de Tareas
       if (!taskId) return NextResponse.json({ error: "taskId es requerido para TASK" }, { status: 400 });
 
@@ -196,7 +209,15 @@ export async function POST(req: Request) {
       });
     }
 
-    return NextResponse.json({ success: true, message: "Operación ejecutada" });
+    // Preparamos el payload de respuesta
+    const responsePayload: any = { success: true, message: "Operación ejecutada" };
+    
+    // Si creamos una propiedad, adjuntamos el ID para que Frank lo pueda usar
+    if (target === 'CREATE_PROPERTY' && targetPropertyId) {
+      responsePayload.propertyId = targetPropertyId;
+    }
+
+    return NextResponse.json(responsePayload);
 
   } catch (error) {
     console.error("Error Webhook:", error);
