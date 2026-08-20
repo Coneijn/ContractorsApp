@@ -24,7 +24,7 @@ export async function POST(req: Request) {
     // 2. Extraemos el payload extendido con los nuevos campos necesarios
     const {
       propertyId,          
-      target,              // 'TASK', 'PROPERTY', 'INVOICE', 'ESTIMATE', 'NEW_TASK', 'AGREEMENT'
+      target,              
       taskId,              
       newStatus,           
       subcontractorId,     
@@ -32,11 +32,17 @@ export async function POST(req: Request) {
       amount,              
       workDescription,     
       originalMessage,
-      dueDate,             // NUEVO: Para actualizar fechas de tareas (ISO string)
-      propertyUpdates,     // NUEVO: Objeto para actualizar lockbox, préstamos, etc.
-      invoiceId,           // NUEVO: Para actualizar pagos existentes
-      estimateId,          // NUEVO: Para aprobar/rechazar presupuestos existentes
-      agreementId          // NUEVO: Para actualizar estado de contratos
+      dueDate,             
+      propertyUpdates,     
+      invoiceId,           
+      estimateId,          
+      agreementId,
+      // NUEVOS CAMPOS:
+      address,             // Requerido para crear propiedades
+      name,                // Requerido para crear contratistas
+      phone,               // Requerido para crear contratistas (mapea a whatsappNumber)
+      email,               // Opcional para contratistas
+      trades               // Opcional para contratistas (mapea a tradeSpecialty)
     } = body;
 
     if (!target) {
@@ -47,20 +53,46 @@ export async function POST(req: Request) {
     let actionPerformed = "";
     let actionDescription = "";
     let targetPropertyId = propertyId;
+    let createdSubcontractorId = null; // Para guardar el ID si creamos un contratista
 
     // 3. LÓGICA POR OBJETIVO (TARGET)
     if (target === 'CREATE_PROPERTY') {
-      // ✅ Creación de Propiedades (Devolverá el ID generado)
-      const propertyData: any = { ...propertyUpdates };
+      // ✅ Creación de Propiedades (Corrige el error 500 validando address)
+      const propAddress = address || (propertyUpdates && propertyUpdates.address);
+      
+      if (!propAddress) {
+        return NextResponse.json({ error: "Falta el campo requerido 'address' para crear la propiedad." }, { status: 400 });
+      }
+
+      const propertyData: any = { ...propertyUpdates, address: propAddress };
       if (newStatus) propertyData.status = newStatus as PropertyStatus;
 
       const newProperty = await prisma.property.create({
         data: propertyData
       });
 
-      targetPropertyId = newProperty.id; // Lo guardamos para el ActivityLog y el Response
+      targetPropertyId = newProperty.id; 
       actionPerformed = `ADMIN_PROPERTY_CREATED`;
-      actionDescription = `El agente creó una nueva propiedad en el sistema.`;
+      actionDescription = `El agente creó una nueva propiedad: ${propAddress}.`;
+
+    } else if (target === 'CREATE_SUBCONTRACTOR') {
+      // ✅ Creación de Contratistas (Devolverá el ID generado)
+      if (!name || !phone) {
+        return NextResponse.json({ error: "Faltan campos requeridos ('name' o 'phone') para crear el contratista." }, { status: 400 });
+      }
+
+      const newSubcontractor = await prisma.subcontractor.create({
+        data: {
+          name: name,
+          whatsappNumber: phone,
+          email: email || null,
+          tradeSpecialty: trades || null,
+          status: 'ACTIVE'
+        }
+      });
+
+      createdSubcontractorId = newSubcontractor.id;
+      // Nota: No seteamos targetPropertyId porque el contratista es una entidad global, no pertenece a una propiedad específica en este punto.
 
     } else if (target === 'TASK') {
       // ✅ Gestión completa de Tareas
@@ -212,15 +244,116 @@ export async function POST(req: Request) {
     // Preparamos el payload de respuesta
     const responsePayload: any = { success: true, message: "Operación ejecutada" };
     
-    // Si creamos una propiedad, adjuntamos el ID para que Frank lo pueda usar
+    // Adjuntamos IDs generados según el target para que Frank los pueda usar
     if (target === 'CREATE_PROPERTY' && targetPropertyId) {
       responsePayload.propertyId = targetPropertyId;
+    }
+    if (target === 'CREATE_SUBCONTRACTOR' && createdSubcontractorId) {
+      responsePayload.subcontractorId = createdSubcontractorId;
     }
 
     return NextResponse.json(responsePayload);
 
   } catch (error) {
     console.error("Error Webhook:", error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+    return NextResponse.json({ error: "Error interno en POST" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// NUEVO ENDPOINT GET PARA LECTURA (Cerebro IA)
+// ==========================================
+export async function GET(req: Request) {
+  // 1. Validación de seguridad vía Header (igual que el POST)
+  const secret = req.headers.get("x-webhook-secret");
+  if (!secret || secret !== process.env.OPENCLAW_ADMIN_SECRET) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    // Expandimos los tipos permitidos
+    const type = searchParams.get('type'); 
+    const query = searchParams.get('query') || '';
+
+    if (!type) {
+      return NextResponse.json({ error: "Falta el parámetro 'type'" }, { status: 400 });
+    }
+
+    let results: any = [];
+
+    // 2. Buscador Dinámico Universal
+    if (type === 'property') {
+      results = await prisma.property.findMany({
+        where: { address: { contains: query, mode: 'insensitive' } },
+        take: 10
+      });
+    } else if (type === 'subcontractor') {
+      results = await prisma.subcontractor.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { company: { contains: query, mode: 'insensitive' } }
+          ]
+        },
+        take: 10
+      });
+    } else if (type === 'invoice') {
+      results = await prisma.invoicePayment.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else if (type === 'task') {
+      // Búsqueda de tareas por dirección, nombre de contratista o descripción
+      results = await prisma.task.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { description: { contains: query, mode: 'insensitive' } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else if (type === 'estimate') {
+      // Búsqueda de presupuestos por dirección o nombre de contratista
+      results = await prisma.estimate.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else if (type === 'agreement') {
+      // Búsqueda de contratos por dirección o nombre de contratista
+      results = await prisma.agreement.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else {
+      return NextResponse.json({ error: "Tipo no válido. Usa: property, subcontractor, invoice, task, estimate, agreement." }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, data: results });
+
+  } catch (error) {
+    console.error("Error GET Webhook:", error);
+    return NextResponse.json({ error: "Error interno al consultar datos" }, { status: 500 });
   }
 }
