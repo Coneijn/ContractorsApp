@@ -109,22 +109,49 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Target no válido. Debe ser 'TASK', 'PROPERTY' o 'NEW_TASK'" }, { status: 400 });
     }
 
-    // 4. Registrar en el Activity Log usando los tipos definidos en tu esquema
+   // 4. Registrar en el Activity Log usando los tipos definidos en tu esquema
     await prisma.activityLog.create({
       data: {
         propertyId: propertyId,
         actorType: "SUBCONTRACTOR", // Clasificado bajo el Enum ActorType
-        actorName: subcontractor.name, 
+        actorName: subcontractor.name,
         action: actionPerformed,
         description: actionDescription,
       }
     });
 
+    // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL) <---
+    if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_INBOUND_WEBHOOK_URL) {
+      let ghlStage = "";
+      if (newStatus === 'PENDING' || target === 'NEW_TASK') ghlStage = "1. Pending Estimate";
+      else if (newStatus === 'IN_PROGRESS') ghlStage = "3. In Progress";
+      else if (newStatus === 'COMPLETED') ghlStage = "4. Pending Inspection / QA";
+      else if (newStatus === 'CANCELLED') ghlStage = "7. Lost (Cancelado)";
+
+      if (ghlStage) {
+        try {
+          await fetch(process.env.GHL_INBOUND_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              appReferenceId: taskId || propertyId, // ID único para GHL (Crucial)
+              contactName: subcontractor.name,
+              opportunityName: `${subcontractor.tradeSpecialty || 'Tarea'} - ${propertyId}`, 
+              stage: ghlStage,
+              source: 'openclaw_webhook'
+            })
+          });
+        } catch (err) {
+          console.error("Error al notificar a GHL:", err);
+        }
+      }
+    }
+
     // 5. Respuesta HTTP 200 directa para confirmar a OpenClaw que el trabajo se hizo
-    return NextResponse.json({ 
-      success: true, 
-      message: "Base de datos actualizada correctamente" 
-    });
+    return NextResponse.json({
+       success: true,
+       message: "Base de datos actualizada correctamente"
+     });
 
   } catch (error) {
     console.error("Error al procesar la actualización desde OpenClaw:", error);

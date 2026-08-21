@@ -228,7 +228,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Target no válido." }, { status: 400 });
     }
 
-    // 4. ✅ Auditoría con ActorType.USER como solicitaste
+    // 4.   Auditor a con ActorType.USER como solicitaste
     if (targetPropertyId) {
       await prisma.activityLog.create({
         data: {
@@ -239,6 +239,31 @@ export async function POST(req: Request) {
           description: actionDescription,
         }
       });
+    }
+
+    // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL) <---
+    if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_INBOUND_WEBHOOK_URL) {
+      let ghlStage = "";
+      if (newStatus === 'PENDING' || target === 'NEW_TASK') ghlStage = "1. Pending Estimate";
+      else if (newStatus === 'IN_PROGRESS') ghlStage = "3. In Progress";
+      else if (newStatus === 'COMPLETED') ghlStage = "4. Pending Inspection / QA";
+      else if (newStatus === 'CANCELLED') ghlStage = "7. Lost (Cancelado)";
+
+      if (ghlStage) {
+        try {
+          await fetch(process.env.GHL_INBOUND_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              appReferenceId: taskId || targetPropertyId, // App Reference ID
+              stage: ghlStage,
+              source: 'master_openclaw_webhook'
+            })
+          });
+        } catch (err) {
+          console.error("Error al notificar a GHL (Master):", err);
+        }
+      }
     }
 
     // Preparamos el payload de respuesta

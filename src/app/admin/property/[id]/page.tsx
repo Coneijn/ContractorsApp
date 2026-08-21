@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getPropertyById } from '@/actions/dashboardActions';
 import { useLanguage } from '@/context/LanguageContext';
+import LanguageSwitcher from '@/components/LanguageSwitcher';
 
 // --- SUB-COMPONENTES PARA MANTENER EL CODIGO LIMPIO ---
 
@@ -46,16 +47,35 @@ function TableRow({ lbl, val, isBold = false }: { lbl: string, val: React.ReactN
   );
 }
 
+// Helper para formatear dinero estilo US (ej. $172k, $172,500 o $757.36)
+function formatCurrency(value: number | null | undefined): string {
+  if (value === null || value === undefined) return 'TBD';
+  
+  // Si tiene decimales (ej. 757.36), forzamos 2 decimales y comas en miles
+  if (value % 1 !== 0) {
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  
+  // Si es una cantidad cerrada de miles (ej. 172000), usamos formato 'k'
+  if (value >= 1000 && value % 1000 === 0) {
+    return `$${value / 1000}k`;
+  }
+  
+  // Enteros regulares que no son millares cerrados (ej. 172500 -> $172,500)
+  return `$${value.toLocaleString('en-US')}`;
+}
+
 // --- COMPONENTE PRINCIPAL ---
 
 export default function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = React.use(params);
   const propertyId = resolvedParams.id;
-  const { t } = useLanguage() as any;
+  const { t, language, setLanguage } = useLanguage() as any;
   const pt = t.propertyDetail || {};
   
   const [property, setProperty] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [checklist, setChecklist] = useState({
     psa: true,
     alta: false,
@@ -67,21 +87,49 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
 
   useEffect(() => {
     async function loadData() {
-      const data = await getPropertyById(propertyId);
-      setProperty(data);
-      setLoading(false);
+      try {
+        const data = await getPropertyById(propertyId);
+        if (!data) {
+          setHasError(true);
+        } else {
+          setProperty(data);
+        }
+      } catch (err) {
+        setHasError(true);
+      } finally {
+        setLoading(false);
+      }
     }
     loadData();
   }, [propertyId]);
 
- const toggleCheck = (key: keyof typeof checklist) => {
+  const toggleCheck = (key: keyof typeof checklist) => {
     setChecklist((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-yellow-400 font-bold">{pt.loading || 'Loading...'}</div>;
 
-  if (!property) return <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-slate-300"><p className="mb-4">{pt.notFound || 'Not found'}</p><Link href="/admin/dashboard" className="text-yellow-400 font-bold hover:underline">{pt.backDashboard || 'Back'}</Link></div>;
-  // Logica de datos (Preparando para cuando agregues estos campos a la BD)
+  // Render Amigable Si Falla la Búsqueda o los Datos
+  if (hasError || !property) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center p-6 text-slate-200 font-sans text-center">
+        <div className="bg-slate-800 border-t-4 border-yellow-400 p-8 rounded-2xl max-w-md w-full shadow-xl">
+          <div className="text-5xl mb-4">🚧</div>
+          <h1 className="text-xl font-extrabold text-white mb-2">
+            {pt.error?.title || 'Property Not Ready Yet'}
+          </h1>
+          <p className="text-sm text-slate-400 mb-6 leading-relaxed">
+            {pt.error?.desc || 'Please be patient, we are currently working on the details for this property.'}
+          </p>
+          <Link href="/admin/dashboard" className="inline-block bg-yellow-400 hover:bg-yellow-500 text-slate-900 font-extrabold py-3 px-6 rounded-lg transition-colors shadow-sm">
+            {pt.error?.back || pt.backDashboard || 'Back to Dashboard'}
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Logica de datos
   const latestUpdate = property.activityLogs?.length > 0 ? property.activityLogs[0] : null;
   const totalRehabBudget = property.estimates?.filter((e: any) => e.status === 'APPROVED').reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
   
@@ -107,7 +155,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <img src="https://image-cdn.carrot.com/uploads/sites/81361/2025/02/image-1.png" alt="Spencer" className="w-16 h-16 rounded-full object-cover border-2 border-yellow-400 shrink-0" />
           
           <div className="flex-1">
-            <h1 className="text-2xl font-extrabold text-white">{property.address}</h1>
+            <h1 className="text-2xl font-extrabold text-white">{property.address || 'Address TBD'}</h1>
             <p className="text-sm text-slate-400 mt-1">SpencerBuysHouses.com</p>
             
             {/* BADGES */}
@@ -115,11 +163,21 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               <span className="px-3 py-1 bg-slate-800 text-slate-300 border border-slate-600 rounded-full text-[11px] font-bold">
                 {pt.dbStatus || 'Status:'} {property.status}
               </span>
-              {/* Badges Condicionales (Mock para el futuro) */}
               {property.strategy === 'Rental' && <span className="px-3 py-1 bg-green-950 text-green-400 border border-green-900 rounded-full text-[11px] font-bold">🏘️ Rental</span>}
               {property.strategy === 'Flip' && <span className="px-3 py-1 bg-pink-950 text-pink-300 border border-pink-900 rounded-full text-[11px] font-bold">🏠 Flip</span>}
               {property.seekingCapital && <span className="px-3 py-1 bg-amber-950 text-yellow-400 border border-amber-900 rounded-full text-[11px] font-bold">💰 Raising Capital</span>}
             </div>
+          </div>
+
+         {/* ACCIONES DE CABECERA */}
+          <div className="mt-4 md:mt-0 md:ml-auto flex flex-wrap items-center justify-end gap-3">
+            <Link 
+              href={`/admin/property/${propertyId}/edit`}
+              className="bg-yellow-400 border border-yellow-500 hover:bg-yellow-500 px-4 py-2 rounded-lg text-sm font-bold transition-colors shadow-sm text-slate-900 flex items-center gap-2"
+            >
+              ✏️ {language === 'en' ? 'Edit' : 'Editar'}
+            </Link>
+            <LanguageSwitcher />
           </div>
         </div>
       </div>
@@ -127,10 +185,10 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
       {/* FINANCIAL BANNER */}
       <div className="bg-slate-950 border-b border-slate-800 mb-6 flex flex-wrap">
         <div className="max-w-[960px] mx-auto w-full flex flex-wrap">
-          <BannerItem label={pt.specs?.purchasePrice || "Purchase Price"} value={property.purchasePrice ? `$${property.purchasePrice.toLocaleString()}` : 'TBD'} sub={property.seller || (pt.pendingDocs || 'Pending')} />
-          <BannerItem label={pt.specs?.avm || "AVM"} value={property.avm ? `$${property.avm.toLocaleString()}` : 'TBD'} sub="RentCast" />
-          <BannerItem label="Rehab Budget" value={totalRehabBudget > 0 ? `$${totalRehabBudget.toLocaleString()}` : 'TBD'} sub="Estimates Approved" />
-          <BannerItem label="Close Date" value={property.closeDate || 'TBD'} sub={property.status} />
+          <BannerItem label={pt.specs?.purchasePrice || "Purchase Price"} value={formatCurrency(property.purchasePrice)} sub={property.seller || (pt.pendingDocs || 'Pending')} />
+          <BannerItem label={pt.specs?.avm || "AVM"} value={formatCurrency(property.avm)} sub="RentCast" />
+          <BannerItem label="Rehab Budget" value={totalRehabBudget > 0 ? formatCurrency(totalRehabBudget) : 'TBD'} sub="Estimates Approved" />
+          <BannerItem label="Close Date" value={property.closeDate ? new Date(property.closeDate).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'TBD'} sub={property.status || 'TBD'} />
         </div>
       </div>
 
@@ -157,10 +215,10 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             <SpecBox val={property.beds || 'TBD'} lbl={pt.specs?.beds || "Beds"} />
             <SpecBox val={property.baths || 'TBD'} lbl={pt.specs?.baths || "Baths"} />
-            <SpecBox val={property.sqft ? property.sqft.toLocaleString() : 'TBD'} lbl={pt.specs?.sqft || "SqFt"} />
+            <SpecBox val={property.sqft ? property.sqft.toLocaleString('en-US') : 'TBD'} lbl={pt.specs?.sqft || "SqFt"} />
             <SpecBox val={property.yearBuilt || 'TBD'} lbl={pt.specs?.built || "Built"} />
-            <SpecBox val={property.avm ? `$${property.avm.toLocaleString()}` : 'TBD'} lbl={pt.specs?.avm || "AVM"} />
-            <SpecBox val={property.estRent ? `$${property.estRent}/mo` : 'TBD'} lbl={pt.specs?.estRent || "Est. Rent"} />
+            <SpecBox val={formatCurrency(property.avm)} lbl={pt.specs?.avm || "AVM"} />
+            <SpecBox val={property.estRent ? `${formatCurrency(property.estRent)}/mo` : 'TBD'} lbl={pt.specs?.estRent || "Est. Rent"} />
           </div>
         </SectionCard>
 
@@ -169,15 +227,15 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
           <SectionCard title={pt.propertyDetails || "Property Details"}>
             <table className="w-full border-collapse">
               <tbody>
-                <TableRow lbl={pt.specs?.address || "Address"} val={property.address} isBold />
+                <TableRow lbl={pt.specs?.address || "Address"} val={property.address || 'TBD'} isBold />
                 <TableRow lbl={pt.specs?.county || "County"} val={property.county || 'TBD'} />
                 <TableRow lbl={pt.specs?.seller || "Seller"} val={property.seller || 'TBD'} />
                 <TableRow lbl={pt.specs?.buyer || "Buyer"} val={property.buyer || 'Volunteer Homes, LLC'} />
                 <TableRow lbl={pt.specs?.type || "Property Type"} val={property.propertyType || 'Single Family'} />
                 <TableRow lbl={pt.specs?.lockbox || "Lockbox / Code"} val={property.accessCodeOrLockbox || 'N/A'} isBold />
-                <TableRow lbl={pt.specs?.purchasePrice || "Purchase Price"} val={property.purchasePrice ? `$${property.purchasePrice.toLocaleString()}` : 'TBD'} />
+                <TableRow lbl={pt.specs?.purchasePrice || "Purchase Price"} val={formatCurrency(property.purchasePrice)} />
                 <TableRow lbl={pt.specs?.strategy || "Strategy"} val={property.strategy || 'TBD'} />
-                <TableRow lbl={pt.specs?.status || "Status"} val={property.status} isBold />
+                <TableRow lbl={pt.specs?.status || "Status"} val={property.status || 'TBD'} isBold />
               </tbody>
             </table>
           </SectionCard>
@@ -187,13 +245,13 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
             <SectionCard title={pt.loanTerms || "Loan Terms"}>
               <table className="w-full border-collapse">
                 <tbody>
-                  <TableRow lbl={pt.specs?.lender || "Lender"} val={property.loanLender} isBold />
-                  <TableRow lbl={pt.specs?.loanAmount || "Loan Amount"} val={`$${property.loanAmount.toLocaleString()}`} />
-                  <TableRow lbl={pt.specs?.interestRate || "Interest Rate"} val={property.loanRate} />
-                  <TableRow lbl={pt.specs?.monthlyPmt || "Monthly Pmt"} val={`$${property.loanMonthly}`} />
-                  <TableRow lbl={pt.specs?.maturityDate || "Maturity Date"} val={<span className="text-orange-400 font-bold">🗓 {property.loanMaturity}</span>} />
-                  <TableRow lbl={pt.specs?.holdback || "Holdback"} val={property.loanHoldback ? `$${property.loanHoldback.toLocaleString()}` : 'N/A'} />
-                  <TableRow lbl={pt.specs?.cashToClose || "Cash to Close"} val={property.loanCashToClose ? `$${property.loanCashToClose.toLocaleString()}` : 'TBD'} />
+                  <TableRow lbl={pt.specs?.lender || "Lender"} val={property.loanLender || 'TBD'} isBold />
+                  <TableRow lbl={pt.specs?.loanAmount || "Loan Amount"} val={formatCurrency(property.loanAmount)} />
+                  <TableRow lbl={pt.specs?.interestRate || "Interest Rate"} val={property.loanRate || 'TBD'} />
+                  <TableRow lbl={pt.specs?.monthlyPmt || "Monthly Pmt"} val={formatCurrency(property.loanMonthly)} />
+                  <TableRow lbl={pt.specs?.maturityDate || "Maturity Date"} val={<span className="text-orange-400 font-bold">  {property.loanMaturity ? new Date(property.loanMaturity).toLocaleDateString('en-US', { timeZone: 'UTC' }) : 'N/A'}</span>} />                  
+                  <TableRow lbl={pt.specs?.holdback || "Holdback"} val={formatCurrency(property.loanHoldback)} />
+                  <TableRow lbl={pt.specs?.cashToClose || "Cash to Close"} val={formatCurrency(property.loanCashToClose)} />
                 </tbody>
               </table>
             </SectionCard>

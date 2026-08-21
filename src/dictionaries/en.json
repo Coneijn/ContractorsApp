@@ -173,6 +173,11 @@
   "propertyDetail": {
     "loading": "Loading property...",
     "notFound": "Property not found.",
+    "error": {
+      "title": "Property Not Ready Yet",
+      "desc": "Please be patient, we are currently working on the details for this property.",
+      "back": "Back to Dashboard"
+    },
     "backDashboard": "Back to Dashboard",
     "dbStatus": "DB Status:",
     "pendingDocs": "Pending Docs",

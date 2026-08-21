@@ -1,7 +1,27 @@
-"use server" // Esto le dice a Next.js que este código solo corre en el servidor
-
+"use server" // Esto le dice a Next.js que este c digo solo corre en el servidor
 import { PrismaClient } from '@prisma/client'
+import { cookies } from 'next/headers'
+import { revalidatePath } from 'next/cache'
+
 const prisma = new PrismaClient()
+
+// Función para verificar el PIN de Admin y establecer la cookie
+export async function verifyPin(pin: string) {
+  const expectedPin = process.env.ADMIN_PIN || '123456';
+  
+  if (pin === expectedPin) {
+    const cookieStore = await cookies();
+    // Establecemos una cookie segura que expira en 24 horas
+    cookieStore.set('admin_auth_pin', 'authenticated', { 
+      secure: process.env.NODE_ENV === 'production', 
+      httpOnly: true, 
+      path: '/admin',
+      maxAge: 60 * 60 * 24 // 24 horas
+    });
+    return true;
+  }
+  return false;
+}
 
 // Función para obtener las propiedades y sus contratistas asignados
 export async function getActiveAssignments() {
@@ -22,6 +42,13 @@ export async function getActiveAssignments() {
     // Convertimos los objetos Decimal a números para que Next.js los pueda serializar
     const plainProperties = properties.map((property) => ({
       ...property,
+      purchasePrice: property.purchasePrice ? Number(property.purchasePrice) : null,
+      avm: property.avm ? Number(property.avm) : null,
+      estRent: property.estRent ? Number(property.estRent) : null,
+      loanAmount: property.loanAmount ? Number(property.loanAmount) : null,
+      loanMonthly: property.loanMonthly ? Number(property.loanMonthly) : null,
+      loanHoldback: property.loanHoldback ? Number(property.loanHoldback) : null,
+      loanCashToClose: property.loanCashToClose ? Number(property.loanCashToClose) : null,
       estimates: property.estimates.map((est) => ({
         ...est,
         amount: est.amount ? Number(est.amount) : 0
@@ -58,21 +85,47 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
           data: { status: newStatus as any } 
         });
 
-        // 2. Sincroniza el estado de la Propiedad automáticamente
-        if (newStatus === 'COMPLETED') {
-          await prisma.property.update({
-            where: { id: task.propertyId },
-            data: { status: 'COMPLETED' }
-          });
-        } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
-          await prisma.property.update({
-            where: { id: task.propertyId },
-            data: { status: 'RENOVATING' }
-          });
+        // 2. Sincroniza el estado de la Propiedad autom ticamente
+          if (newStatus === 'COMPLETED') {
+            await prisma.property.update({
+              where: { id: task.propertyId },
+              data: { status: 'COMPLETED' }
+            });
+          } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
+            await prisma.property.update({
+              where: { id: task.propertyId },
+              data: { status: 'RENOVATING' }
+            });
+          }
+
+          // ---> NOTIFICACIÓN A GHL DESDE EL DASHBOARD (Admin UI) <---
+          if (process.env.GHL_INBOUND_WEBHOOK_URL) {
+            let ghlStage = "";
+            if (newStatus === 'PENDING') ghlStage = "1. Pending Estimate";
+            else if (newStatus === 'IN_PROGRESS') ghlStage = "3. In Progress";
+            else if (newStatus === 'COMPLETED') ghlStage = "4. Pending Inspection / QA";
+            else if (newStatus === 'CANCELLED') ghlStage = "7. Lost (Cancelado)";
+
+            if (ghlStage) {
+              try {
+                await fetch(process.env.GHL_INBOUND_WEBHOOK_URL, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    appReferenceId: taskId,
+                    stage: ghlStage,
+                    source: 'admin_dashboard_ui'
+                  })
+                });
+              } catch (err) {
+                console.error("Error al notificar a GHL desde el dashboard:", err);
+              }
+            }
+          }
+
         }
-      }
-    } else {
-      // Si es un estado personalizado ("QUEUED" o texto libre), lo guardamos en el ActivityLog 
+      } else {
+        // Si es un estado personalizado ("QUEUED" o texto libre), lo guardamos en el ActivityLog
       // para no romper la base de datos.
       if (task) {
         await prisma.activityLog.create({
@@ -313,5 +366,99 @@ export async function saveProperty(data: { address: string; taskDesc?: string; c
       return { success: false, error: "La propiedad ya existe." };
     }
     return { success: false, error: "Error interno al guardar en base de datos" };
+  }
+}
+
+export async function getPropertyFieldOptions() {
+  try {
+    // Consulta para obtener valores únicos de campos String
+    const types = await prisma.property.findMany({
+      select: { propertyType: true },
+      distinct: ['propertyType']
+    });
+    
+    const strategies = await prisma.property.findMany({
+      select: { strategy: true },
+      distinct: ['strategy']
+    });
+
+    return {
+      propertyTypes: types.map(t => t.propertyType).filter(Boolean) as string[],
+      strategies: strategies.map(s => s.strategy).filter(Boolean) as string[],
+      statuses: ['RENOVATING', 'COMPLETED', 'SOLD'] // Desde PropertyStatus Enum
+    };
+  } catch (error) {
+    console.error("Error fetching field options:", error);
+    return { propertyTypes: [], strategies: [], statuses: [] };
+  }
+}
+
+export async function updatePropertyData(id: string, formData: FormData) {
+  try {
+    // Parseador para números que pueden llevar decimales (Float/Decimal en BD)
+    const parseNumber = (val: FormDataEntryValue | null) => {
+      if (!val || val === '') return null;
+      const num = Number(val);
+      return isNaN(num) ? null : num;
+    };
+
+    // Parseador para enteros estrictos (Int en BD). Redondea para evitar error de Prisma.
+    const parseIntNumber = (val: FormDataEntryValue | null) => {
+      if (!val || val === '') return null;
+      const num = Number(val);
+      return isNaN(num) ? null : Math.round(num);
+    };
+
+    const updateData = {
+      address: formData.get('address') as string,
+      status: formData.get('status') as any,
+      county: formData.get('county') as string,
+      propertyType: formData.get('propertyType') as string,
+      strategy: formData.get('strategy') as string,
+      sellerName: formData.get('sellerName') as string,
+      buyerName: formData.get('buyerName') as string,
+      accessCodeOrLockbox: formData.get('accessCodeOrLockbox') as string,
+      beds: parseNumber(formData.get('beds')),
+      baths: parseNumber(formData.get('baths')),
+      sqft: parseIntNumber(formData.get('sqft')),
+      yearBuilt: parseIntNumber(formData.get('yearBuilt')),
+      purchasePrice: parseNumber(formData.get('purchasePrice')),
+      avm: parseNumber(formData.get('avm')),
+      estRent: parseNumber(formData.get('estRent')),
+      loanLender: formData.get('loanLender') as string,
+      loanAmount: parseNumber(formData.get('loanAmount')),
+      loanRate: formData.get('loanRate') as string,
+      loanMonthly: parseNumber(formData.get('loanMonthly')),
+    };
+
+    // Limpiar nulos o indefinidos si prefieres no sobreescribir con null
+    Object.keys(updateData).forEach(key => {
+      if ((updateData as any)[key] === null && formData.get(key) === '') {
+        (updateData as any)[key] = null;
+      }
+    });
+
+    await prisma.property.update({
+      where: { id },
+      data: updateData
+    });
+
+    // Registrar en ActivityLog
+    await prisma.activityLog.create({
+      data: {
+        propertyId: id,
+        actorType: 'USER',
+        actorName: 'Admin', // Idealmente sacar esto de la sesión del usuario autenticado
+        action: 'PROPERTY_UPDATED',
+        description: 'Updated property details via dashboard form.'
+      }
+    });
+
+    revalidatePath(`/admin/property/${id}`);
+    revalidatePath(`/admin/property/${id}/edit`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating property:", error);
+    return { success: false, error: 'Failed to update property' };
   }
 }
