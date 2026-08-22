@@ -85,47 +85,102 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
           data: { status: newStatus as any } 
         });
 
-        // 2. Sincroniza el estado de la Propiedad autom ticamente
-          if (newStatus === 'COMPLETED') {
-            await prisma.property.update({
-              where: { id: task.propertyId },
-              data: { status: 'COMPLETED' }
-            });
-          } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
-            await prisma.property.update({
-              where: { id: task.propertyId },
-              data: { status: 'RENOVATING' }
-            });
+        // 2. Sincroniza el estado de la Propiedad automáticamente
+        if (newStatus === 'COMPLETED') {
+          await prisma.property.update({
+            where: { id: task.propertyId },
+            data: { status: 'COMPLETED' }
+          });
+        } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
+          await prisma.property.update({
+            where: { id: task.propertyId },
+            data: { status: 'RENOVATING' }
+          });
+        }
+
+        // ---> NOTIFICACIÓN A GHL DESDE EL DASHBOARD (Admin UI Vía API v2) <---
+        if (process.env.GHL_API_TOKEN) {
+          let ghlPipelineStageId: string = "";
+          
+          if (newStatus === 'PENDING') {
+            ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID || "";
+          } else if (newStatus === 'IN_PROGRESS') {
+            ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID || "";
+          } else if (newStatus === 'COMPLETED') {
+            ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID || "";
+          } else if (newStatus === 'CANCELLED') {
+            ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID || "";
           }
 
-          // ---> NOTIFICACIÓN A GHL DESDE EL DASHBOARD (Admin UI) <---
-          if (process.env.GHL_INBOUND_WEBHOOK_URL) {
-            let ghlStage = "";
-            if (newStatus === 'PENDING') ghlStage = "1. Pending Estimate";
-            else if (newStatus === 'IN_PROGRESS') ghlStage = "3. In Progress";
-            else if (newStatus === 'COMPLETED') ghlStage = "4. Pending Inspection / QA";
-            else if (newStatus === 'CANCELLED') ghlStage = "7. Lost (Cancelado)";
+          // En este contexto usamos el taskId como Reference ID
+          const appReferenceId = taskId; 
+          const ghlLocationId = process.env.GHL_LOCATION_ID || "";
 
-            if (ghlStage) {
-              try {
-                await fetch(process.env.GHL_INBOUND_WEBHOOK_URL, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+          if (ghlPipelineStageId && appReferenceId && ghlLocationId) {
+            try {
+              // ==========================================
+              // PASO 1: BUSCAR LA OPORTUNIDAD EN GHL
+              // ==========================================
+              const searchUrl = `https://services.leadconnectorhq.com/opportunities/search?location_id=${ghlLocationId}&q=${appReferenceId}`;
+              
+              const searchRes = await fetch(searchUrl, {
+                method: 'GET',
+                headers: {
+                  'Authorization': `Bearer ${process.env.GHL_API_TOKEN}`,
+                  'Version': '2021-07-28',
+                  'Accept': 'application/json'
+                }
+              });
+
+              if (!searchRes.ok) throw new Error(`GHL Search Error: ${searchRes.statusText}`);
+              const searchData = await searchRes.json();
+              const opportunities = searchData.opportunities || [];
+
+              if (opportunities.length === 0) {
+                console.warn(`No se encontró oportunidad en GHL para el App Reference ID: ${appReferenceId}`);
+              } else {
+                // ==========================================
+                // PASO 2: FILTRAR Y ACTUALIZAR
+                // ==========================================
+                const customFieldId = process.env.GHL_CUSTOM_FIELD_APP_REF_ID; 
+                
+                let targetOpportunity = opportunities.find((opp: any) => {
+                  if (!opp.customFields) return false;
+                  return opp.customFields.some((cf: any) => cf.id === customFieldId && cf.value === appReferenceId);
+                });
+
+                if (!targetOpportunity) targetOpportunity = opportunities[0];
+
+                const ghlOpportunityId = targetOpportunity.id;
+
+                const updateRes = await fetch(`https://services.leadconnectorhq.com/opportunities/${ghlOpportunityId}`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${process.env.GHL_API_TOKEN}`,
+                    'Version': '2021-07-28'
+                  },
                   body: JSON.stringify({
-                    appReferenceId: taskId,
-                    stage: ghlStage,
-                    source: 'admin_dashboard_ui'
+                    pipelineStageId: ghlPipelineStageId
                   })
                 });
-              } catch (err) {
-                console.error("Error al notificar a GHL desde el dashboard:", err);
-              }
-            }
-          }
 
+                if (!updateRes.ok) {
+                  const errorDetails = await updateRes.json();
+                  console.error("GHL API Update Error desde Dashboard:", errorDetails);
+                }
+              }
+            } catch (err) {
+              console.error("Error al notificar a GHL desde el dashboard (API):", err);
+            }
+          } else {
+            console.warn("Faltan variables para sincronizar GHL desde el Dashboard (Stage, Reference ID o Location ID)");
+          }
         }
-      } else {
-        // Si es un estado personalizado ("QUEUED" o texto libre), lo guardamos en el ActivityLog
+
+      }
+    } else {
+      // Si es un estado personalizado ("QUEUED" o texto libre), lo guardamos en el ActivityLog
       // para no romper la base de datos.
       if (task) {
         await prisma.activityLog.create({
