@@ -241,28 +241,81 @@ export async function POST(req: Request) {
       });
     }
 
-    // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL) <---
-    if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_INBOUND_WEBHOOK_URL) {
-      let ghlStage = "";
-      if (newStatus === 'PENDING' || target === 'NEW_TASK') ghlStage = "1. Pending Estimate";
-      else if (newStatus === 'IN_PROGRESS') ghlStage = "3. In Progress";
-      else if (newStatus === 'COMPLETED') ghlStage = "4. Pending Inspection / QA";
-      else if (newStatus === 'CANCELLED') ghlStage = "7. Lost (Cancelado)";
+    // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL Vía API v2) <---
+    if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_API_TOKEN) {
+      // 1. Mapeo de Etapas (Stages) a IDs reales de GHL
+      let ghlPipelineStageId = "";
+      if (newStatus === 'PENDING' || target === 'NEW_TASK') ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID;
+      else if (newStatus === 'IN_PROGRESS') ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID;
+      else if (newStatus === 'COMPLETED') ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID;
+      else if (newStatus === 'CANCELLED') ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID;
 
-      if (ghlStage) {
+      const appReferenceId = taskId || targetPropertyId;
+      const ghlLocationId = process.env.GHL_LOCATION_ID; // Requerido para buscar
+
+      if (ghlPipelineStageId && appReferenceId && ghlLocationId) {
         try {
-          await fetch(process.env.GHL_INBOUND_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              appReferenceId: taskId || targetPropertyId, // App Reference ID
-              stage: ghlStage,
-              source: 'master_openclaw_webhook'
-            })
+          // ==========================================
+          // PASO 1: BUSCAR LA OPORTUNIDAD EN GHL
+          // ==========================================
+          // Usamos el parámetro 'q' para buscar el appReferenceId. 
+          const searchUrl = `https://services.leadconnectorhq.com/opportunities/search?location_id=${ghlLocationId}&q=${appReferenceId}`;
+          
+          const searchRes = await fetch(searchUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${process.env.GHL_API_TOKEN}`,
+              'Version': '2021-07-28',
+              'Accept': 'application/json'
+            }
           });
+
+          if (!searchRes.ok) throw new Error(`GHL Search Error: ${searchRes.statusText}`);
+          const searchData = await searchRes.json();
+          const opportunities = searchData.opportunities || [];
+
+          if (opportunities.length === 0) {
+            console.warn(`No se encontró ninguna oportunidad en GHL con el App Reference ID: ${appReferenceId}`);
+          } else {
+            // Buscamos cuál de los resultados devueltos tiene exactamente ese valor en tu Custom Field.
+            // Nota: Debes poner el ID de tu Custom Field en el .env, ej: GHL_CUSTOM_FIELD_APP_REF_ID="xxx-yyy"
+            const customFieldId = process.env.GHL_CUSTOM_FIELD_APP_REF_ID; 
+            
+            let targetOpportunity = opportunities.find(opp => {
+              if (!opp.customFields) return false;
+              return opp.customFields.some((cf: any) => cf.id === customFieldId && cf.value === appReferenceId);
+            });
+
+            // Si no pasas el ID del custom field en el .env, tomamos el primer resultado que coincida con la búsqueda 'q'
+            if (!targetOpportunity) targetOpportunity = opportunities[0];
+
+            const ghlOpportunityId = targetOpportunity.id;
+
+            // ==========================================
+            // PASO 2: ACTUALIZAR LA OPORTUNIDAD EN GHL
+            // ==========================================
+            const updateRes = await fetch(`https://services.leadconnectorhq.com/opportunities/${ghlOpportunityId}`, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.GHL_API_TOKEN}`,
+                'Version': '2021-07-28'
+              },
+              body: JSON.stringify({
+                pipelineStageId: ghlPipelineStageId
+              })
+            });
+
+            if (!updateRes.ok) {
+              const errorDetails = await updateRes.json();
+              console.error("GHL API Update Error:", errorDetails);
+            }
+          }
         } catch (err) {
-          console.error("Error al notificar a GHL (Master):", err);
+          console.error("Error al notificar a GHL (API):", err);
         }
+      } else {
+        console.warn("Faltan variables para sincronizar GHL (Stage, Reference ID o Location ID)");
       }
     }
 
