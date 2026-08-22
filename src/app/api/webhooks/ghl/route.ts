@@ -50,11 +50,22 @@ export async function POST(req: Request) {
           data: { status: 'RENOVATING' } 
         });
       }
+
+      // ---> NUEVO: REGISTRO DE AUDITORÍA (AUDIT LOG) <---
+      await prisma.activityLog.create({
+        data: {
+          propertyId: updatedTask.propertyId,
+          actorType: 'USER', // Utilizamos 'USER' como clasificador genérico del sistema/integración
+          actorName: 'GoHighLevel Integration', // Identifica claramente que el cambio provino de GHL
+          action: `GHL_SYNC_${localStatus}`,
+          description: `GHL actualizó automáticamente el estado de la tarea a ${localStatus} (Stage: ${ghlStage}).`,
+        }
+      });
     }
 
     return NextResponse.json({ 
       success: true, 
-      message: "Base de datos actualizada desde GHL con éxito" 
+      message: "Base de datos y Activity Log actualizados desde GHL con éxito" 
     });
 
   } catch (error) {
