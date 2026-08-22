@@ -57,7 +57,6 @@ export async function POST(req: Request) {
 
     // 3. LÓGICA POR OBJETIVO (TARGET)
     if (target === 'CREATE_PROPERTY') {
-      // ✅ Creación de Propiedades (Corrige el error 500 validando address)
       const propAddress = address || (propertyUpdates && propertyUpdates.address);
       
       if (!propAddress) {
@@ -76,7 +75,6 @@ export async function POST(req: Request) {
       actionDescription = `El agente creó una nueva propiedad: ${propAddress}.`;
 
     } else if (target === 'CREATE_SUBCONTRACTOR') {
-      // ✅ Creación de Contratistas (Devolverá el ID generado)
       if (!name || !phone) {
         return NextResponse.json({ error: "Faltan campos requeridos ('name' o 'phone') para crear el contratista." }, { status: 400 });
       }
@@ -92,16 +90,14 @@ export async function POST(req: Request) {
       });
 
       createdSubcontractorId = newSubcontractor.id;
-      // Nota: No seteamos targetPropertyId porque el contratista es una entidad global, no pertenece a una propiedad específica en este punto.
 
     } else if (target === 'TASK') {
-      // ✅ Gestión completa de Tareas
       if (!taskId) return NextResponse.json({ error: "taskId es requerido para TASK" }, { status: 400 });
 
       const updateData: any = {};
       if (newStatus) updateData.status = newStatus as TaskStatus;
       if (subcontractorId) updateData.subcontractorId = subcontractorId;
-      if (dueDate) updateData.dueDate = new Date(dueDate); // Actualizar vencimiento
+      if (dueDate) updateData.dueDate = new Date(dueDate);
 
       const updatedTask = await prisma.task.update({
         where: { id: taskId },
@@ -113,10 +109,9 @@ export async function POST(req: Request) {
       actionDescription = `El agente actualizó la tarea ${taskId}. ${dueDate ? `Nueva fecha: ${dueDate}.` : ''} Contexto: "${originalMessage || 'N/A'}"`;
 
     } else if (target === 'PROPERTY') {
-      // ✅ Actualización de Propiedades (Códigos, estados, finanzas)
       if (!propertyId) return NextResponse.json({ error: "propertyId es requerido para PROPERTY" }, { status: 400 });
 
-      const propertyData: any = { ...propertyUpdates }; // Extrae datos financieros o de lockbox
+      const propertyData: any = { ...propertyUpdates };
       if (newStatus) propertyData.status = newStatus as PropertyStatus;
 
       await prisma.property.update({
@@ -128,7 +123,6 @@ export async function POST(req: Request) {
       actionDescription = `El agente actualizó detalles de la propiedad. ${newStatus ? `Estado a ${newStatus}.` : 'Campos operativos/financieros modificados.'}`;
 
     } else if (target === 'NEW_TASK') {
-      // ✅ Creación de Tareas
       if (!propertyId || !description) return NextResponse.json({ error: "propertyId y description son requeridos" }, { status: 400 });
 
       await prisma.task.create({
@@ -147,9 +141,7 @@ export async function POST(req: Request) {
       actionDescription = `El agente asignó una nueva tarea: "${description}"`;
 
     } else if (target === 'INVOICE') {
-      // ✅ Control Financiero y de Pagos (Crear o Actualizar)
       if (invoiceId) {
-        // Actualizar factura existente
         const updateData: any = {};
         if (amount !== undefined) {
           updateData.agreedAmount = amount;
@@ -165,7 +157,6 @@ export async function POST(req: Request) {
         actionPerformed = `ADMIN_INVOICE_UPDATED`;
         actionDescription = `El agente actualizó la factura ${invoiceId}.`;
       } else {
-        // Crear nueva factura
         if (!propertyId || !subcontractorId || amount === undefined) {
           return NextResponse.json({ error: "propertyId, subcontractorId y amount son requeridos" }, { status: 400 });
         }
@@ -184,9 +175,7 @@ export async function POST(req: Request) {
       }
 
     } else if (target === 'ESTIMATE') {
-      // ✅ Gestión de Presupuestos (Aprobar, Rechazar, Crear)
       if (estimateId && newStatus) {
-        // Actualizar estado de presupuesto existente (Aprobar/Rechazar)
         const updatedEst = await prisma.estimate.update({
           where: { id: estimateId },
           data: { status: newStatus as EstimateStatus }
@@ -195,7 +184,6 @@ export async function POST(req: Request) {
         actionPerformed = `ADMIN_ESTIMATE_${newStatus}`;
         actionDescription = `El agente actualizó el presupuesto ${estimateId} a ${newStatus}.`;
       } else {
-        // Crear nuevo presupuesto
         if (!propertyId || !subcontractorId || !newStatus) return NextResponse.json({ error: "Faltan datos para crear ESTIMATE" }, { status: 400 });
         await prisma.estimate.create({
           data: {
@@ -209,7 +197,6 @@ export async function POST(req: Request) {
       }
 
     } else if (target === 'AGREEMENT') {
-      // ✅ Gestión de Acuerdos (Firmar/Validar contratos)
       if (!agreementId || !newStatus) return NextResponse.json({ error: "agreementId y newStatus requeridos" }, { status: 400 });
 
       const updatedAgreement = await prisma.agreement.update({
@@ -228,12 +215,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Target no válido." }, { status: 400 });
     }
 
-    // 4.   Auditor a con ActorType.USER como solicitaste
     if (targetPropertyId) {
       await prisma.activityLog.create({
         data: {
           propertyId: targetPropertyId,
-          actorType: ActorType.USER,  // <-- Se registra como USER (administrador)
+          actorType: ActorType.USER,  
           actorName: actorName,
           action: actionPerformed,
           description: actionDescription,
@@ -243,22 +229,23 @@ export async function POST(req: Request) {
 
     // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL Vía API v2) <---
     if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_API_TOKEN) {
-      // 1. Mapeo de Etapas (Stages) a IDs reales de GHL
-      let ghlPipelineStageId = "";
-      if (newStatus === 'PENDING' || target === 'NEW_TASK') ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID;
-      else if (newStatus === 'IN_PROGRESS') ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID;
-      else if (newStatus === 'COMPLETED') ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID;
-      else if (newStatus === 'CANCELLED') ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID;
+      let ghlPipelineStageId: string = "";
+      
+      if (newStatus === 'PENDING' || target === 'NEW_TASK') {
+        ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID || "";
+      } else if (newStatus === 'IN_PROGRESS') {
+        ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID || "";
+      } else if (newStatus === 'COMPLETED') {
+        ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID || "";
+      } else if (newStatus === 'CANCELLED') {
+        ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID || "";
+      }
 
-      const appReferenceId = taskId || targetPropertyId;
-      const ghlLocationId = process.env.GHL_LOCATION_ID; // Requerido para buscar
+      const appReferenceId = taskId || targetPropertyId; 
+      const ghlLocationId = process.env.GHL_LOCATION_ID || "";
 
       if (ghlPipelineStageId && appReferenceId && ghlLocationId) {
         try {
-          // ==========================================
-          // PASO 1: BUSCAR LA OPORTUNIDAD EN GHL
-          // ==========================================
-          // Usamos el parámetro 'q' para buscar el appReferenceId. 
           const searchUrl = `https://services.leadconnectorhq.com/opportunities/search?location_id=${ghlLocationId}&q=${appReferenceId}`;
           
           const searchRes = await fetch(searchUrl, {
@@ -277,23 +264,17 @@ export async function POST(req: Request) {
           if (opportunities.length === 0) {
             console.warn(`No se encontró ninguna oportunidad en GHL con el App Reference ID: ${appReferenceId}`);
           } else {
-            // Buscamos cuál de los resultados devueltos tiene exactamente ese valor en tu Custom Field.
-            // Nota: Debes poner el ID de tu Custom Field en el .env, ej: GHL_CUSTOM_FIELD_APP_REF_ID="xxx-yyy"
             const customFieldId = process.env.GHL_CUSTOM_FIELD_APP_REF_ID; 
             
-            let targetOpportunity = opportunities.find(opp => {
+            let targetOpportunity = opportunities.find((opp: any) => {
               if (!opp.customFields) return false;
               return opp.customFields.some((cf: any) => cf.id === customFieldId && cf.value === appReferenceId);
             });
 
-            // Si no pasas el ID del custom field en el .env, tomamos el primer resultado que coincida con la búsqueda 'q'
             if (!targetOpportunity) targetOpportunity = opportunities[0];
 
             const ghlOpportunityId = targetOpportunity.id;
 
-            // ==========================================
-            // PASO 2: ACTUALIZAR LA OPORTUNIDAD EN GHL
-            // ==========================================
             const updateRes = await fetch(`https://services.leadconnectorhq.com/opportunities/${ghlOpportunityId}`, {
               method: 'PUT',
               headers: {
@@ -319,10 +300,8 @@ export async function POST(req: Request) {
       }
     }
 
-    // Preparamos el payload de respuesta
     const responsePayload: any = { success: true, message: "Operación ejecutada" };
     
-    // Adjuntamos IDs generados según el target para que Frank los pueda usar
     if (target === 'CREATE_PROPERTY' && targetPropertyId) {
       responsePayload.propertyId = targetPropertyId;
     }
@@ -342,7 +321,6 @@ export async function POST(req: Request) {
 // NUEVO ENDPOINT GET PARA LECTURA (Cerebro IA)
 // ==========================================
 export async function GET(req: Request) {
-  // 1. Validación de seguridad vía Header (igual que el POST)
   const secret = req.headers.get("x-webhook-secret");
   if (!secret || secret !== process.env.OPENCLAW_ADMIN_SECRET) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
@@ -350,7 +328,6 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url);
-    // Expandimos los tipos permitidos
     const type = searchParams.get('type'); 
     const query = searchParams.get('query') || '';
 
@@ -360,7 +337,6 @@ export async function GET(req: Request) {
 
     let results: any = [];
 
-    // 2. Buscador Dinámico Universal
     if (type === 'property') {
       results = await prisma.property.findMany({
         where: { address: { contains: query, mode: 'insensitive' } },
@@ -388,7 +364,6 @@ export async function GET(req: Request) {
         take: 10
       });
     } else if (type === 'task') {
-      // Búsqueda de tareas por dirección, nombre de contratista o descripción
       results = await prisma.task.findMany({
         where: {
           OR: [
@@ -401,7 +376,6 @@ export async function GET(req: Request) {
         take: 10
       });
     } else if (type === 'estimate') {
-      // Búsqueda de presupuestos por dirección o nombre de contratista
       results = await prisma.estimate.findMany({
         where: {
           OR: [
@@ -413,7 +387,6 @@ export async function GET(req: Request) {
         take: 10
       });
     } else if (type === 'agreement') {
-      // Búsqueda de contratos por dirección o nombre de contratista
       results = await prisma.agreement.findMany({
         where: {
           OR: [

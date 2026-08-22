@@ -1,142 +1,251 @@
-// src/app/api/webhooks/openclaw/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient, TaskStatus, PropertyStatus } from '@prisma/client';
+import { 
+  PrismaClient, 
+  TaskStatus, 
+  PropertyStatus, 
+  EstimateStatus, 
+  PaymentStatus, 
+  AgreementStatus,
+  ActorType 
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 export async function POST(req: Request) {
+  // 1. Validación de seguridad vía Header usando OPENCLAW_ADMIN_SECRET
+  const secret = req.headers.get("x-webhook-secret");
+  if (!secret || secret !== process.env.OPENCLAW_ADMIN_SECRET) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
   try {
     const body = await req.json();
-    
-    // 1. Extraemos el payload estructurado que envía OpenClaw
-    const { 
-      whatsappNumber, 
-      propertyId, 
-      target,       // 'TASK', 'PROPERTY' o 'NEW_TASK'
-      taskId,       // Requerido si target es 'TASK'
-      newStatus,    // Ej. 'COMPLETED', 'IN_PROGRESS' (Requerido para TASK y PROPERTY)
-      description,  // Requerido si target es 'NEW_TASK'
-      originalMessage // Opcional: el mensaje del contratista para los logs
+
+    // 2. Extraemos el payload extendido con los nuevos campos necesarios
+    const {
+      propertyId,          
+      target,              
+      taskId,              
+      newStatus,           
+      subcontractorId,     
+      description,         
+      amount,              
+      workDescription,     
+      originalMessage,
+      dueDate,             
+      propertyUpdates,     
+      invoiceId,           
+      estimateId,          
+      agreementId,
+      // NUEVOS CAMPOS:
+      address,             // Requerido para crear propiedades
+      name,                // Requerido para crear contratistas
+      phone,               // Requerido para crear contratistas (mapea a whatsappNumber)
+      email,               // Opcional para contratistas
+      trades               // Opcional para contratistas (mapea a tradeSpecialty)
     } = body;
 
-    // Validación de campos mínimos requeridos por la base de datos
-    if (!whatsappNumber || !propertyId || !target) {
-      return NextResponse.json(
-        { error: "Faltan datos requeridos (whatsappNumber, propertyId, target)" }, 
-        { status: 400 }
-      );
-    }
-    if ((target === 'TASK' || target === 'PROPERTY') && !newStatus) {
-      return NextResponse.json(
-        { error: "newStatus es requerido para actualizar tareas o propiedades" }, 
-        { status: 400 }
-      );
+    if (!target) {
+      return NextResponse.json({ error: "Falta el campo requerido: target" }, { status: 400 });
     }
 
-    // 2. Identificar al contratista que originó la acción
-    const subcontractor = await prisma.subcontractor.findUnique({
-      where: { whatsappNumber: whatsappNumber },
-    });
-
-    if (!subcontractor) {
-      return NextResponse.json(
-        { error: `Contratista con número ${whatsappNumber} no encontrado en el sistema` }, 
-        { status: 404 }
-      );
-    }
-
+    const actorName = "OpenClaw Admin Agent";
     let actionPerformed = "";
     let actionDescription = "";
+    let targetPropertyId = propertyId;
+    let createdSubcontractorId = null; // Para guardar el ID si creamos un contratista
 
-    // 3. Ejecutar la modificación en la base de datos según el objetivo (Target)
-    if (target === 'TASK') {
-      if (!taskId) {
-        return NextResponse.json({ error: "taskId es requerido cuando el target es TASK" }, { status: 400 });
-      }
+    // 3. LÓGICA POR OBJETIVO (TARGET)
+    if (target === 'CREATE_PROPERTY') {
+      const propAddress = address || (propertyUpdates && propertyUpdates.address);
       
-      await prisma.task.update({
-        where: { id: taskId },
-        data: { status: newStatus as TaskStatus }
+      if (!propAddress) {
+        return NextResponse.json({ error: "Falta el campo requerido 'address' para crear la propiedad." }, { status: 400 });
+      }
+
+      const propertyData: any = { ...propertyUpdates, address: propAddress };
+      if (newStatus) propertyData.status = newStatus as PropertyStatus;
+
+      const newProperty = await prisma.property.create({
+        data: propertyData
       });
 
-      // Si la tarea se completa, completamos la propiedad automáticamente para enviarla a Past Projects
-      if (newStatus === 'COMPLETED') {
-        await prisma.property.update({
-          where: { id: propertyId },
-          data: { status: 'COMPLETED' }
-        });
-      } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
-        await prisma.property.update({
-          where: { id: propertyId },
-          data: { status: 'RENOVATING' }
-        });
+      targetPropertyId = newProperty.id; 
+      actionPerformed = `ADMIN_PROPERTY_CREATED`;
+      actionDescription = `El agente creó una nueva propiedad: ${propAddress}.`;
+
+    } else if (target === 'CREATE_SUBCONTRACTOR') {
+      if (!name || !phone) {
+        return NextResponse.json({ error: "Faltan campos requeridos ('name' o 'phone') para crear el contratista." }, { status: 400 });
       }
 
-      actionPerformed = `TASK_UPDATED_TO_${newStatus}`;
-      actionDescription = `Tarea ${taskId} actualizada vía OpenClaw. Mensaje original: "${originalMessage || 'N/A'}"`;
+      const newSubcontractor = await prisma.subcontractor.create({
+        data: {
+          name: name,
+          whatsappNumber: phone,
+          email: email || null,
+          tradeSpecialty: trades || null,
+          status: 'ACTIVE'
+        }
+      });
+
+      createdSubcontractorId = newSubcontractor.id;
+
+    } else if (target === 'TASK') {
+      if (!taskId) return NextResponse.json({ error: "taskId es requerido para TASK" }, { status: 400 });
+
+      const updateData: any = {};
+      if (newStatus) updateData.status = newStatus as TaskStatus;
+      if (subcontractorId) updateData.subcontractorId = subcontractorId;
+      if (dueDate) updateData.dueDate = new Date(dueDate);
+
+      const updatedTask = await prisma.task.update({
+        where: { id: taskId },
+        data: updateData
+      });
       
+      targetPropertyId = updatedTask.propertyId;
+      actionPerformed = `ADMIN_TASK_UPDATED_${newStatus || 'MODIFIED'}`;
+      actionDescription = `El agente actualizó la tarea ${taskId}. ${dueDate ? `Nueva fecha: ${dueDate}.` : ''} Contexto: "${originalMessage || 'N/A'}"`;
+
     } else if (target === 'PROPERTY') {
+      if (!propertyId) return NextResponse.json({ error: "propertyId es requerido para PROPERTY" }, { status: 400 });
+
+      const propertyData: any = { ...propertyUpdates };
+      if (newStatus) propertyData.status = newStatus as PropertyStatus;
+
       await prisma.property.update({
         where: { id: propertyId },
-        data: { status: newStatus as PropertyStatus }
+        data: propertyData
       });
-      actionPerformed = `PROPERTY_UPDATED_TO_${newStatus}`;
-      actionDescription = `Propiedad actualizada vía OpenClaw. Mensaje original: "${originalMessage || 'N/A'}"`;
-      
+
+      actionPerformed = `ADMIN_PROPERTY_UPDATED`;
+      actionDescription = `El agente actualizó detalles de la propiedad. ${newStatus ? `Estado a ${newStatus}.` : 'Campos operativos/financieros modificados.'}`;
+
     } else if (target === 'NEW_TASK') {
-      // Extraemos la descripción para la nueva asignación
-      const taskDescription = description || originalMessage || "Nueva tarea asignada vía WhatsApp";
-      
+      if (!propertyId || !description) return NextResponse.json({ error: "propertyId y description son requeridos" }, { status: 400 });
+
       await prisma.task.create({
         data: {
           propertyId: propertyId,
-          subcontractorId: subcontractor.id,
-          description: taskDescription,
-          status: 'PENDING'
+          subcontractorId: subcontractorId || null,
+          description: description,
+          status: 'PENDING',
+          dueDate: dueDate ? new Date(dueDate) : null
+        }
+      });
+
+      await prisma.property.update({ where: { id: propertyId }, data: { status: 'RENOVATING' } });
+
+      actionPerformed = `ADMIN_NEW_TASK_CREATED`;
+      actionDescription = `El agente asignó una nueva tarea: "${description}"`;
+
+    } else if (target === 'INVOICE') {
+      if (invoiceId) {
+        const updateData: any = {};
+        if (amount !== undefined) {
+          updateData.agreedAmount = amount;
+          updateData.requestedAmount = amount;
+        }
+        if (newStatus) updateData.status = newStatus as PaymentStatus;
+
+        const updatedInvoice = await prisma.invoicePayment.update({
+          where: { id: invoiceId },
+          data: updateData
+        });
+        targetPropertyId = updatedInvoice.propertyId;
+        actionPerformed = `ADMIN_INVOICE_UPDATED`;
+        actionDescription = `El agente actualizó la factura ${invoiceId}.`;
+      } else {
+        if (!propertyId || !subcontractorId || amount === undefined) {
+          return NextResponse.json({ error: "propertyId, subcontractorId y amount son requeridos" }, { status: 400 });
+        }
+        await prisma.invoicePayment.create({
+          data: {
+            propertyId: propertyId,
+            subcontractorId: subcontractorId,
+            workDescription: workDescription || "Servicio registrado por administración",
+            agreedAmount: amount,
+            requestedAmount: amount,
+            status: PaymentStatus.PENDING
+          }
+        });
+        actionPerformed = `ADMIN_INVOICE_CREATED`;
+        actionDescription = `El agente registró un monto a pagar de $${amount}.`;
+      }
+
+    } else if (target === 'ESTIMATE') {
+      if (estimateId && newStatus) {
+        const updatedEst = await prisma.estimate.update({
+          where: { id: estimateId },
+          data: { status: newStatus as EstimateStatus }
+        });
+        targetPropertyId = updatedEst.propertyId;
+        actionPerformed = `ADMIN_ESTIMATE_${newStatus}`;
+        actionDescription = `El agente actualizó el presupuesto ${estimateId} a ${newStatus}.`;
+      } else {
+        if (!propertyId || !subcontractorId || !newStatus) return NextResponse.json({ error: "Faltan datos para crear ESTIMATE" }, { status: 400 });
+        await prisma.estimate.create({
+          data: {
+            propertyId, subcontractorId, amount: amount || 0,
+            status: newStatus as EstimateStatus,
+            workDescription: workDescription || "Presupuesto de agente"
+          }
+        });
+        actionPerformed = `ADMIN_ESTIMATE_CREATED`;
+        actionDescription = `El agente registró un presupuesto en estado ${newStatus}.`;
+      }
+
+    } else if (target === 'AGREEMENT') {
+      if (!agreementId || !newStatus) return NextResponse.json({ error: "agreementId y newStatus requeridos" }, { status: 400 });
+
+      const updatedAgreement = await prisma.agreement.update({
+        where: { id: agreementId },
+        data: { 
+          status: newStatus as AgreementStatus,
+          signedAt: newStatus === 'SIGNED' ? new Date() : null
         }
       });
       
-      // Aseguramos que la propiedad pase a RENOVATING para que aparezca en el tablero activo
-      await prisma.property.update({
-        where: { id: propertyId },
-        data: { status: 'RENOVATING' }
-      });
-      
-      actionPerformed = `NEW_TASK_CREATED`;
-      actionDescription = `Nueva asignación creada vía OpenClaw: "${taskDescription}"`;
+      targetPropertyId = updatedAgreement.propertyId;
+      actionPerformed = `ADMIN_AGREEMENT_${newStatus}`;
+      actionDescription = `El agente marcó el contrato ${agreementId} como ${newStatus}.`;
 
     } else {
-      return NextResponse.json({ error: "Target no válido. Debe ser 'TASK', 'PROPERTY' o 'NEW_TASK'" }, { status: 400 });
+      return NextResponse.json({ error: "Target no válido." }, { status: 400 });
     }
 
-   // 4. Registrar en el Activity Log usando los tipos definidos en tu esquema
-    await prisma.activityLog.create({
-      data: {
-        propertyId: propertyId,
-        actorType: "SUBCONTRACTOR", // Clasificado bajo el Enum ActorType
-        actorName: subcontractor.name,
-        action: actionPerformed,
-        description: actionDescription,
-      }
-    });
+    if (targetPropertyId) {
+      await prisma.activityLog.create({
+        data: {
+          propertyId: targetPropertyId,
+          actorType: ActorType.USER,  
+          actorName: actorName,
+          action: actionPerformed,
+          description: actionDescription,
+        }
+      });
+    }
 
     // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL Vía API v2) <---
     if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_API_TOKEN) {
-      // 1. Mapeo de Etapas (Stages) a IDs reales de GHL
-      let ghlPipelineStageId = "";
-      if (newStatus === 'PENDING' || target === 'NEW_TASK') ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID;
-      else if (newStatus === 'IN_PROGRESS') ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID;
-      else if (newStatus === 'COMPLETED') ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID;
-      else if (newStatus === 'CANCELLED') ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID;
+      let ghlPipelineStageId: string = "";
+      
+      if (newStatus === 'PENDING' || target === 'NEW_TASK') {
+        ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID || "";
+      } else if (newStatus === 'IN_PROGRESS') {
+        ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID || "";
+      } else if (newStatus === 'COMPLETED') {
+        ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID || "";
+      } else if (newStatus === 'CANCELLED') {
+        ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID || "";
+      }
 
-      const appReferenceId = taskId || propertyId; // Mantenemos la lógica de extracción
-      const ghlLocationId = process.env.GHL_LOCATION_ID;
+      const appReferenceId = taskId || targetPropertyId; 
+      const ghlLocationId = process.env.GHL_LOCATION_ID || "";
 
       if (ghlPipelineStageId && appReferenceId && ghlLocationId) {
         try {
-          // ==========================================
-          // PASO 1: BUSCAR LA OPORTUNIDAD EN GHL
-          // ==========================================
           const searchUrl = `https://services.leadconnectorhq.com/opportunities/search?location_id=${ghlLocationId}&q=${appReferenceId}`;
           
           const searchRes = await fetch(searchUrl, {
@@ -155,12 +264,8 @@ export async function POST(req: Request) {
           if (opportunities.length === 0) {
             console.warn(`No se encontró ninguna oportunidad en GHL con el App Reference ID: ${appReferenceId}`);
           } else {
-            // ==========================================
-            // PASO 2: FILTRAR Y ACTUALIZAR
-            // ==========================================
             const customFieldId = process.env.GHL_CUSTOM_FIELD_APP_REF_ID; 
             
-            // TypeScript inferirá 'opp: any', pero lo tipamos por seguridad
             let targetOpportunity = opportunities.find((opp: any) => {
               if (!opp.customFields) return false;
               return opp.customFields.some((cf: any) => cf.id === customFieldId && cf.value === appReferenceId);
@@ -195,17 +300,111 @@ export async function POST(req: Request) {
       }
     }
 
-    // 5. Respuesta HTTP 200 directa para confirmar a OpenClaw que el trabajo se hizo
-    return NextResponse.json({
-       success: true,
-       message: "Base de datos actualizada correctamente"
-     });
+    const responsePayload: any = { success: true, message: "Operación ejecutada" };
+    
+    if (target === 'CREATE_PROPERTY' && targetPropertyId) {
+      responsePayload.propertyId = targetPropertyId;
+    }
+    if (target === 'CREATE_SUBCONTRACTOR' && createdSubcontractorId) {
+      responsePayload.subcontractorId = createdSubcontractorId;
+    }
+
+    return NextResponse.json(responsePayload);
 
   } catch (error) {
-    console.error("Error al procesar la actualización desde OpenClaw:", error);
-    return NextResponse.json(
-      { error: "Error interno del servidor al modificar la base de datos" }, 
-      { status: 500 }
-    );
+    console.error("Error Webhook:", error);
+    return NextResponse.json({ error: "Error interno en POST" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// NUEVO ENDPOINT GET PARA LECTURA (Cerebro IA)
+// ==========================================
+export async function GET(req: Request) {
+  const secret = req.headers.get("x-webhook-secret");
+  if (!secret || secret !== process.env.OPENCLAW_ADMIN_SECRET) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const type = searchParams.get('type'); 
+    const query = searchParams.get('query') || '';
+
+    if (!type) {
+      return NextResponse.json({ error: "Falta el parámetro 'type'" }, { status: 400 });
+    }
+
+    let results: any = [];
+
+    if (type === 'property') {
+      results = await prisma.property.findMany({
+        where: { address: { contains: query, mode: 'insensitive' } },
+        take: 10
+      });
+    } else if (type === 'subcontractor') {
+      results = await prisma.subcontractor.findMany({
+        where: {
+          OR: [
+            { name: { contains: query, mode: 'insensitive' } },
+            { company: { contains: query, mode: 'insensitive' } }
+          ]
+        },
+        take: 10
+      });
+    } else if (type === 'invoice') {
+      results = await prisma.invoicePayment.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else if (type === 'task') {
+      results = await prisma.task.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { description: { contains: query, mode: 'insensitive' } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else if (type === 'estimate') {
+      results = await prisma.estimate.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else if (type === 'agreement') {
+      results = await prisma.agreement.findMany({
+        where: {
+          OR: [
+            { property: { address: { contains: query, mode: 'insensitive' } } },
+            { subcontractor: { name: { contains: query, mode: 'insensitive' } } }
+          ]
+        },
+        include: { property: { select: { address: true } }, subcontractor: { select: { name: true } } },
+        take: 10
+      });
+    } else {
+      return NextResponse.json({ error: "Tipo no válido. Usa: property, subcontractor, invoice, task, estimate, agreement." }, { status: 400 });
+    }
+
+    return NextResponse.json({ success: true, data: results });
+
+  } catch (error) {
+    console.error("Error GET Webhook:", error);
+    return NextResponse.json({ error: "Error interno al consultar datos" }, { status: 500 });
   }
 }
