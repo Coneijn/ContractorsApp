@@ -25,7 +25,6 @@
       "newTaskTitle": "Asignar nueva tarea a esta propiedad",
       "assignContractor": "+ Asignar Contratista"
     },
-   
     "modals": {
       "newAssignment": "Nueva Asignación",
       "selectProperty": "Seleccionar Propiedad...",
@@ -152,10 +151,10 @@
     "finishDate": "Fecha de Finalización *",
     "agreedAmount": "Monto Acordado *",
     "reqAmount": "Monto que Solicitas / Cotizas *",
-    "photosTitle": "Fotos y Videos del Trabajo Realizado *",
+    "photosTitle": "Fotos del Trabajo Realizado *",
     "photosWarning": "⚠️ Obligatorio — las facturas sin fotos no serán procesadas.",
-    "photosTap": "Toca para subir fotos y videos",
-    "photosHint": "Se aceptan JPG, PNG, MP4, MOV · Máx 20 archivos",
+    "photosTap": "Toca o arrastra aquí tus fotos",
+    "photosHint": "JPG, PNG, WEBP o GIF · Máx 5 MB c/u · Hasta 20 fotos",
     "w9StatusTitle": "Estado del W-9",
     "w9Question": "¿Has entregado tu formulario W-9? *",
     "w9Yes": "Sí, ya lo entregué",
@@ -170,6 +169,25 @@
     "successInvoiceDesc": "Gracias. Tu factura ha sido recibida. Si fue enviada antes del miércoles a las 5 PM y el trabajo se verifica completo el jueves, tu cheque estará listo el viernes.",
     "successEstimateDesc": "Gracias. Tu cotización ha sido recibida. Spencer la revisará y te contactará pronto.",
     "questions": "¿Preguntas? WhatsApp (901) 318-1736 o correo admin@volunteerbuyers.com"
+  },
+  "imageUpload": {
+    "dropActive": "Suelta aquí tus fotos",
+    "uploading": "Subiendo {current} de {total}...",
+    "attached": "{count} foto(s) adjuntas",
+    "remove": "Quitar foto",
+    "edit": "Editar detalles",
+    "missingAlt": "Sin descripción",
+    "errorTooLarge": "\"{name}\" supera el límite de {max} MB",
+    "errorType": "\"{name}\" no es una imagen compatible (JPG, PNG, WEBP o GIF)",
+    "errorTooMany": "Puedes adjuntar hasta {max} fotos",
+    "errorUpload": "No se pudo subir la foto. Revisa tu conexión e inténtalo de nuevo.",
+    "modalTitle": "Detalles de la foto",
+    "altText": "Descripción (texto alternativo)",
+    "altTextHint": "¿Qué muestra la foto? ej. \"Pared de la cocina repintada\"",
+    "fieldTitle": "Título",
+    "caption": "Pie de foto",
+    "descriptionField": "Notas",
+    "save": "Guardar"
   },
   "propertyDetail": {
     "loading": "Cargando propiedad...",
