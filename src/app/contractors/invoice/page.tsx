@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 import { submitContractorForm, getContractors, getActiveAssignments } from '@/actions/dashboardActions';
+import ImageUpload, { type ImageFile } from '@/components/ImageUpload';
 
 type Mode = 'invoice' | 'estimate';
 
@@ -11,7 +12,7 @@ export default function InvoiceFormPage() {
   const { t, language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<Mode>('invoice');
   const [w9Status, setW9Status] = useState<string>('');
-  const [files, setFiles] = useState<File[]>([]);
+  const [photos, setPhotos] = useState<ImageFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   
@@ -29,26 +30,18 @@ export default function InvoiceFormPage() {
     loadData();
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles((prev) => [...prev, ...newFiles].slice(0, 20)); // Max 20
-    }
-  };
-
-  const removeFile = (indexToRemove: number) => {
-    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
-  };
-
   const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
+    // Las fotos ya están en S3: al servidor solo le mandamos sus URLs públicas
+    const photoUrls = mode === 'invoice' ? photos.map((p) => p.url) : [];
+
     try {
       // Llamamos al Server Action para guardar en Prisma
-      const result = await submitContractorForm(data, mode);
+      const result = await submitContractorForm({ ...data, photos: photoUrls }, mode);
       
       if (result.success) {
         setIsSuccess(true);
@@ -66,7 +59,8 @@ export default function InvoiceFormPage() {
         `Work Done: ${data.workDescription}\n` +
         `Agreed Amount: ${data.agreedAmount || 'N/A'}\n` +
         `Requesting: ${data.requestedAmount || 'N/A'}\n` +
-        `W-9 on file: ${data.w9Status}`
+        `W-9 on file: ${data.w9Status}\n` +
+        `Photos:\n${photoUrls.join('\n') || 'N/A'}`
       );
       window.location.href = `mailto:admin@volunteerbuyers.com?subject=${subject}&body=${body}`;
       setIsSuccess(true);
@@ -284,23 +278,17 @@ export default function InvoiceFormPage() {
               <h2 className="text-xs font-bold tracking-widest uppercase text-slate-400 mb-2 pb-2 border-b border-slate-700">{t.invoiceForm.photosTitle}</h2>
               <p className="text-[11px] font-bold text-red-400 mb-3">{t.invoiceForm.photosWarning}</p>
               
-              <div className="relative border-2 border-dashed border-slate-600 rounded-xl p-6 text-center hover:border-yellow-400 hover:bg-slate-800/50 transition cursor-pointer mb-3 bg-slate-900">
-                <input type="file" multiple accept="image/*,video/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
-                <div className="text-3xl mb-2">📸</div>
-                <strong className="block text-sm text-slate-200">{t.invoiceForm.photosTap}</strong>
-                <span className="text-xs text-slate-500 mt-1">{t.invoiceForm.photosHint}</span>
-              </div>
-              
-              {files.length > 0 && (
-                <div className="space-y-2">
-                  {files.map((file, idx) => (
-                    <div key={idx} className="flex items-center justify-between bg-slate-900 px-3 py-2 rounded-lg text-xs">
-                      <span className="truncate text-slate-300 w-4/5">{file.type.startsWith('video') ? '🎬' : '🖼️'} {file.name} <em className="text-slate-500">({(file.size / 1024 / 1024).toFixed(1)}MB)</em></span>
-                      <button type="button" onClick={() => removeFile(idx)} className="text-red-400 hover:text-red-300 font-bold px-2 text-sm">✕</button>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Sube directo a S3 con URL prefirmada; el formulario solo guarda las URLs.
+                  disableMetadata: no hay dónde persistir altText/caption (Media solo tiene fileUrl). */}
+              <ImageUpload
+                label={t.invoiceForm.photosTap}
+                hint={t.invoiceForm.photosHint}
+                value={photos}
+                onChange={setPhotos}
+                multiple
+                maxFiles={20}
+                disableMetadata
+              />
             </div>
           )}
 

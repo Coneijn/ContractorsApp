@@ -134,7 +134,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const totalRehabBudget = property.estimates?.filter((e: any) => e.status === 'APPROVED').reduce((sum: number, e: any) => sum + e.amount, 0) || 0;
   
   // Separar Fotos y Videos
-  const photos = property.media?.filter((m: any) => m.fileUrl.match(/\.(jpeg|jpg|gif|png)$/i)) || [];
+  const photos = property.media?.filter((m: any) => m.fileUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i)) || [];
   const videos = property.media?.filter((m: any) => m.fileUrl.match(/\.(mp4|mov|webm)$/i)) || [];
 
   // Consolidar Documentos

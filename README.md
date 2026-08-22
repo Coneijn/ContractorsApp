@@ -35,3 +35,25 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 # ContractorsApp
+
+## Subida de fotos a S3 (`/contractors/invoice`)
+
+Las fotos del formulario de facturas van directo del navegador a S3 con una
+URL prefirmada: `getPresignedUrl` (`src/actions/s3Actions.ts`) firma una URL
+de 60 s y el navegador hace el `PUT`. Los bytes no pasan por el servidor de
+Next y las credenciales de AWS no salen del runtime de Node. El formulario
+solo guarda las URLs públicas, que se persisten en la tabla `media` al
+enviar.
+
+Variables de entorno necesarias (`.env`):
+
+```env
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_REGION=us-east-2
+AWS_BUCKET_NAME=contractorsapp-bucket
+```
+
+La configuración del bucket (lectura pública, CORS y política IAM mínima)
+está en [`aws/README.md`](./aws/README.md) — **sin el CORS aplicado, el PUT
+desde el navegador falla con 403**.

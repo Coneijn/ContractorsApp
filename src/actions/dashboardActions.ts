@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { revalidatePath } from 'next/cache'
+import { filterOwnBucketUrls } from '@/lib/s3'
 
 const prisma = new PrismaClient()
 
@@ -244,7 +245,24 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
       });
     }
 
-    // 3. Crear el registro en la tabla correspondiente según el modo
+    // 3. Guardar las fotos que el navegador ya subió a S3 (solo llegan URLs)
+    const photoUrls: string[] = Array.isArray(data.photos) ? data.photos : [];
+
+    if (photoUrls.length > 0) {
+      const safeUrls = filterOwnBucketUrls(photoUrls);
+
+      if (safeUrls.length > 0) {
+        await prisma.media.createMany({
+          data: safeUrls.map((fileUrl) => ({
+            propertyId: property.id,
+            fileUrl,
+            uploadedBy: subcontractor.id,
+          }))
+        });
+      }
+    }
+
+    // 4. Crear el registro en la tabla correspondiente según el modo
     if (mode === 'invoice') {
       await prisma.invoicePayment.create({
         data: {
