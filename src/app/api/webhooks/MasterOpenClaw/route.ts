@@ -124,13 +124,12 @@ export async function POST(req: Request) {
 
     } else if (target === 'NEW_TASK') {
       if (!propertyId || !description) return NextResponse.json({ error: "propertyId y description son requeridos" }, { status: 400 });
-
       await prisma.task.create({
         data: {
           propertyId: propertyId,
           subcontractorId: subcontractorId || null,
           description: description,
-          status: 'PENDING',
+          status: subcontractorId ? 'PENDING_ESTIMATE' : 'UNASSIGNED',
           dueDate: dueDate ? new Date(dueDate) : null
         }
       });
@@ -231,13 +230,13 @@ export async function POST(req: Request) {
     if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_API_TOKEN) {
       let ghlPipelineStageId: string = "";
       
-      if (newStatus === 'PENDING' || target === 'NEW_TASK') {
+      if (newStatus === 'PENDING_ESTIMATE' || newStatus === 'UNASSIGNED' || target === 'NEW_TASK') {
         ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID || "";
-      } else if (newStatus === 'IN_PROGRESS') {
+      } else if (newStatus === 'IN_PROGRESS' || newStatus === 'ASSIGNED_OR_TO_DO') {
         ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID || "";
-      } else if (newStatus === 'COMPLETED') {
+      } else if (newStatus === 'PENDING_INSPECTION_OR_QA' || newStatus === 'INVOICE_SUBMITTED' || newStatus === 'WON') {
         ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID || "";
-      } else if (newStatus === 'CANCELLED') {
+      } else if (newStatus === 'LOST' || newStatus === 'CANCELLED') {
         ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID || "";
       }
 

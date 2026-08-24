@@ -1,4 +1,4 @@
-// seed.ts
+// prisma/seed.ts
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
@@ -138,7 +138,7 @@ async function main() {
       loanHoldback: 25000.00,
       tasks: {
         create: [
-          { description: 'Paint in/out, replace misc items, deep clean, fix lights, show-ready', subcontractorId: subMap['tania'], status: 'PENDING' }
+          { description: 'Paint in/out, replace misc items, deep clean, fix lights, show-ready', subcontractorId: subMap['tania'], status: 'PENDING_ESTIMATE' }
         ]
       },
       estimates: {
@@ -167,7 +167,7 @@ async function main() {
       loanHoldback: 33800.00,
       tasks: {
         create: [
-          { description: 'Final quote pending — after Sherburne wraps', subcontractorId: subMap['mario'], status: 'PENDING' }
+          { description: 'Final quote pending — after Sherburne wraps', subcontractorId: subMap['mario'], status: 'PENDING_ESTIMATE' }
         ]
       },
       conditionNotes: {
@@ -207,7 +207,7 @@ async function main() {
       loanMaturity: new Date('2027-02-01T12:00:00Z'),
       tasks: {
         create: [
-          { description: 'Bid received $7,670 · Aug 4, 2026 · awaiting Spencer approval', subcontractorId: subMap['tania'], status: 'PENDING' }
+          { description: 'Bid received $7,670 · Aug 4, 2026 · awaiting Spencer approval', subcontractorId: subMap['tania'], status: 'PENDING_ESTIMATE' }
         ]
       },
       estimates: {
@@ -243,7 +243,7 @@ async function main() {
       loanHoldback: 45000.00,
       tasks: {
         create: [
-          { description: 'Next after Burlingate · roof & subfloor rehab underway', subcontractorId: subMap['luisFelipe'], status: 'PENDING' }
+          { description: 'Next after Burlingate · roof & subfloor rehab underway', subcontractorId: subMap['luisFelipe'], status: 'PENDING_ESTIMATE' }
         ]
       },
       estimates: {
@@ -265,7 +265,7 @@ async function main() {
       updatedAt: new Date('2026-08-04T12:00:00Z'),
       tasks: {
         create: [
-          { description: 'Paint, carpet removal, cabinet work', subcontractorId: subMap['tania'], status: 'COMPLETED', updatedAt: new Date('2026-08-04T12:00:00Z') }
+          { description: 'Paint, carpet removal, cabinet work', subcontractorId: subMap['tania'], status: 'WON', updatedAt: new Date('2026-08-04T12:00:00Z') }
         ]
       },
       estimates: {
@@ -300,7 +300,7 @@ async function main() {
       updatedAt: new Date('2026-07-31T12:00:00Z'),
       tasks: {
         create: [
-          { description: 'Full rehab (paint, clean, show-ready) and owner finance sale executed', subcontractorId: subMap['tania'], status: 'COMPLETED', updatedAt: new Date('2026-07-31T12:00:00Z') }
+          { description: 'Full rehab (paint, clean, show-ready) and owner finance sale executed', subcontractorId: subMap['tania'], status: 'WON', updatedAt: new Date('2026-07-31T12:00:00Z') }
         ]
       }
     }
@@ -316,8 +316,8 @@ async function main() {
       updatedAt: new Date('2026-08-01T12:00:00Z'),
       tasks: {
         create: [
-          { description: 'Flooring (remove carpet → LVP ~1,655sqft) + full interior paint', subcontractorId: subMap['mario'], status: 'COMPLETED', updatedAt: new Date('2026-01-01T12:00:00Z') },
-          { description: 'Trim trees, mow, mulch, haul trash, dead tree removal', subcontractorId: subMap['johnny'], status: 'COMPLETED', updatedAt: new Date('2026-07-28T12:00:00Z') }
+          { description: 'Flooring (remove carpet → LVP ~1,655sqft) + full interior paint', subcontractorId: subMap['mario'], status: 'WON', updatedAt: new Date('2026-01-01T12:00:00Z') },
+          { description: 'Trim trees, mow, mulch, haul trash, dead tree removal', subcontractorId: subMap['johnny'], status: 'WON', updatedAt: new Date('2026-07-28T12:00:00Z') }
         ]
       },
       invoices: {
@@ -372,7 +372,7 @@ async function main() {
       loanMaturity: new Date('2027-03-01T12:00:00Z'),
       tasks: {
         create: [
-          { description: 'Full renovation scope sent to Tania for quoting', subcontractorId: subMap['tania'], status: 'PENDING' }
+          { description: 'Full renovation scope sent to Tania for quoting', subcontractorId: subMap['tania'], status: 'PENDING_ESTIMATE' }
         ]
       },
       conditionNotes: {
@@ -412,7 +412,7 @@ async function main() {
         isRaisingCapital: unassigned.raising ? unassigned.raising : false,
         tasks: {
           create: [
-            { description: unassigned.desc, status: 'PENDING' }
+            { description: unassigned.desc, status: 'UNASSIGNED' }
           ]
         }
       }

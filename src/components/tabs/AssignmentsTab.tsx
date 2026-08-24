@@ -80,10 +80,10 @@ export default function AssignmentsTab({ properties, onUpdate, onAssign }: Assig
             // Buscamos si hay un presupuesto (estimate) para este contratista en esta propiedad
             const estimate = prop.estimates?.find((e: any) => e.subcontractorId === group.contractor.id);
 
-            if (task.status === 'COMPLETED') {
+            if (task.status === 'WON' || task.status === 'PENDING_INSPECTION_OR_QA' || task.status === 'INVOICE_SUBMITTED') {
               visualStatus = 'completed';
-            } else if (task.status === 'IN_PROGRESS') {
-              visualStatus = 'in-progress'; // (
+            } else if (task.status === 'IN_PROGRESS' || task.status === 'ASSIGNED_OR_TO_DO') {
+              visualStatus = 'in-progress'; 
             } else if (estimate) {
               if (estimate.status === 'APPROVED') {
                 visualStatus = 'scheduled'; // (📋)
