@@ -21,9 +21,9 @@ export async function GET(req: Request) {
         id: true, 
         address: true, 
         accessCodeOrLockbox: true,
-        tasks: { 
-            where: { 
-            status: { in: ['PENDING', 'IN_PROGRESS'] } // Solo tareas no terminadas
+        tasks: {
+             where: {
+             status: { in: ['PENDING_ESTIMATE', 'UNASSIGNED', 'ASSIGNED_OR_TO_DO', 'IN_PROGRESS'] } // Solo tareas no terminadas
           },
           select: {
             id: true,
