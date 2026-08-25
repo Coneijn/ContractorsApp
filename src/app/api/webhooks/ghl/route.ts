@@ -1,113 +1,108 @@
 // Archivo: app/api/webhooks/ghl/route.ts
 import { NextResponse } from 'next/server';
-import { PrismaClient, TaskStatus } from '@prisma/client';
+import { PrismaClient, TaskStatus, PropertyStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Mapeo de nombres o IDs de etapa recibidos desde GHL hacia TaskStatus
+function mapGhlStageToTaskStatus(stage?: string): TaskStatus | undefined {
+  if (!stage) return undefined;
+
+  const normalized = stage.trim().toLowerCase();
+
+  if (normalized.includes('pending estimate')) return TaskStatus.PENDING_ESTIMATE;
+  if (normalized.includes('assigned') || normalized.includes('to do')) return TaskStatus.ASSIGNED_OR_TO_DO;
+  if (normalized.includes('in progress')) return TaskStatus.IN_PROGRESS;
+  if (normalized.includes('pending inspection') || normalized.includes('qa')) return TaskStatus.PENDING_INSPECTION_OR_QA;
+  if (normalized.includes('invoice submitted')) return TaskStatus.INVOICE_SUBMITTED;
+  if (normalized.includes('unassigned')) return TaskStatus.UNASSIGNED;
+  if (normalized.includes('won')) return TaskStatus.WON;
+  if (normalized.includes('lost')) return TaskStatus.LOST;
+
+  return undefined;
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
 
-    // 1. Extracción de identificador y stage (soporta customData y raíz con typo de GHL)
+    // Extraer identificadores y campos compatibles con el payload
     const customData = body.customData || {};
     const appReferenceId = customData.appReferenceId || body.appReferenceId;
     
-    // GHL a menudo envía 'pipleline_stage' (con doble 'l') en el objeto raíz
-    const rawStage = customData.ghlStage || body.pipleline_stage || body.pipeline_stage || body.ghlStage;
-
-    // 2. Extracción de campos adicionales útiles del payload
-    const opportunityName = body.opportunity_name;
-    const ghlOpportunityId = body.id;
-    const description = customData.description || body.description || opportunityName;
-    const contractorName = body.full_name || `${body.first_name || ''} ${body.last_name || ''}`.trim();
-    const contractorPhone = body.phone;
+    // Captura el stage desde customData, body directo o el campo typo de GHL 'pipleline_stage'
+    const rawStage = customData.ghlStage || body.ghlStage || body.pipleline_stage || body.pipeline_stage;
+    const description = customData.description || body.description || body.opportunity_name;
 
     if (!appReferenceId) {
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: "Falta appReferenceId (Requerido para actualizar la tarea)",
-        received: { 
-          hasAppReferenceId: false,
-          opportunityId: ghlOpportunityId,
-          opportunityName 
-        }
+        received: { appReferenceId: !!appReferenceId }
       }, { status: 400 });
     }
 
-    // 3. Mapeo de Stages de GHL a TaskStatus local
-    let localStatus: TaskStatus | undefined;
-    
-    if (rawStage) {
-      const stageLower = String(rawStage).toLowerCase();
+    const localStatus = mapGhlStageToTaskStatus(rawStage);
 
-      if (stageLower.includes('pending estimate') || stageLower.includes('assigned')) {
-        localStatus = 'PENDING';
-      } else if (stageLower.includes('in progress')) {
-        localStatus = 'IN_PROGRESS';
-      } else if (stageLower.includes('pending inspection') || stageLower.includes('invoice submitted') || stageLower.includes('won') || stageLower.includes('completed')) {
-        localStatus = 'COMPLETED';
-      } else if (stageLower.includes('lost') || stageLower.includes('cancelled') || stageLower.includes('canceled')) {
-        localStatus = 'CANCELLED';
-      }
-    }
-
-    // 4. Construcción de la data a actualizar
-    const updateData: Record<string, any> = {};
+    // Construir campos de actualización
+    const updateData: { status?: TaskStatus; description?: string } = {};
     if (localStatus) updateData.status = localStatus;
     if (description) updateData.description = description;
 
     if (Object.keys(updateData).length === 0) {
-      return NextResponse.json({ 
-        error: "No se encontraron datos válidos para actualizar (Stage no reconocido o sin cambios).",
-        receivedStage: rawStage 
+      return NextResponse.json({
+        error: "No se encontraron datos válidos para actualizar (Stage no reconocido o sin descripción).",
+        receivedStage: rawStage
       }, { status: 400 });
     }
 
-    // 5. Actualización de la Tarea en BD
+    // Actualizar tarea en la base de datos
     const updatedTask = await prisma.task.update({
       where: { id: appReferenceId },
       data: updateData
     });
 
-    // 6. Sincronización del estado de la propiedad asociada
-    if (localStatus && updatedTask.propertyId) {
-      if (localStatus === 'COMPLETED') {
-        await prisma.property.update({ 
-          where: { id: updatedTask.propertyId }, 
-          data: { status: 'COMPLETED' } 
-        });
-      } else if (localStatus === 'IN_PROGRESS' || localStatus === 'PENDING') {
-        await prisma.property.update({ 
-          where: { id: updatedTask.propertyId }, 
-          data: { status: 'RENOVATING' } 
+    // Sincronizar PropertyStatus según el TaskStatus
+    if (localStatus) {
+      let targetPropertyStatus: PropertyStatus | undefined;
+
+      if (localStatus === TaskStatus.WON || localStatus === TaskStatus.INVOICE_SUBMITTED) {
+        targetPropertyStatus = PropertyStatus.COMPLETED;
+      } else if (
+        localStatus === TaskStatus.IN_PROGRESS ||
+        localStatus === TaskStatus.ASSIGNED_OR_TO_DO ||
+        localStatus === TaskStatus.PENDING_ESTIMATE ||
+        localStatus === TaskStatus.PENDING_INSPECTION_OR_QA
+      ) {
+        targetPropertyStatus = PropertyStatus.RENOVATING;
+      }
+
+      if (targetPropertyStatus) {
+        await prisma.property.update({
+          where: { id: updatedTask.propertyId },
+          data: { status: targetPropertyStatus }
         });
       }
     }
 
-    // 7. Registro en Audit Log
-    if (updatedTask.propertyId) {
-      await prisma.activityLog.create({
-        data: {
-          propertyId: updatedTask.propertyId,
-          actorType: 'USER',
-          actorName: contractorName ? `GHL: ${contractorName}` : 'GoHighLevel Integration',
-          action: localStatus ? `GHL_SYNC_${localStatus}` : 'GHL_SYNC_UPDATE',
-          description: `GHL actualizó la tarea. ${localStatus ? `Estado: ${localStatus} (Stage: ${rawStage}).` : ''} ${contractorPhone ? `Tel: ${contractorPhone}.` : ''}`.trim(),
-        }
-      });
-    }
-
-    return NextResponse.json({ 
-      success: true, 
-      message: "Base de datos y Activity Log actualizados desde GHL con éxito",
-      updatedFields: Object.keys(updateData),
-      taskId: updatedTask.id
+    // Registro de auditoría
+    await prisma.activityLog.create({
+      data: {
+        propertyId: updatedTask.propertyId,
+        actorType: 'USER',
+        actorName: 'GoHighLevel Integration',
+        action: localStatus ? `GHL_SYNC_${localStatus}` : 'GHL_SYNC_UPDATE',
+        description: `GHL actualizó la tarea. ${localStatus ? `Estado: ${localStatus} (Stage: ${rawStage}).` : ''} ${description ? 'Descripción actualizada.' : ''}`.trim(),
+      }
     });
 
-  } catch (error: any) {
-    console.error("Error en Webhook inverso de GHL:", error);
-    return NextResponse.json({ 
-      error: "Error interno del servidor",
-      details: error?.message 
-    }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      message: "Base de datos y Activity Log actualizados desde GHL con éxito",
+      updatedFields: Object.keys(updateData)
+    });
+
+  } catch (error) {
+    console.error("Error en Webhook de GHL:", error);
+    return NextResponse.json({ error: "Error interno del servidor" }, { status: 500 });
   }
 }
