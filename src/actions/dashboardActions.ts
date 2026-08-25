@@ -73,8 +73,8 @@ export async function getActiveAssignments() {
 export async function updateTaskStatus(taskId: string, newStatus: string) {
   try {
     // Definimos los únicos estados que la base de datos permite para una Tarea
-    const validStatuses = ['PENDING', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
-
+    const validStatuses = ['PENDING_ESTIMATE', 'ASSIGNED_OR_TO_DO', 'IN_PROGRESS', 'PENDING_INSPECTION_OR_QA', 'INVOICE_SUBMITTED', 'UNASSIGNED', 'WON', 'LOST'];
+    
     // Obtenemos la tarea primero para tener el propertyId a la mano
     const task = await prisma.task.findUnique({ where: { id: taskId } });
 
@@ -84,15 +84,15 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
         await prisma.task.update({
           where: { id: taskId },
           data: { status: newStatus as any } 
-        });
+         });
 
         // 2. Sincroniza el estado de la Propiedad automáticamente
-        if (newStatus === 'COMPLETED') {
+        if (newStatus === 'WON') {
           await prisma.property.update({
             where: { id: task.propertyId },
             data: { status: 'COMPLETED' }
           });
-        } else if (newStatus === 'IN_PROGRESS' || newStatus === 'PENDING') {
+        } else if (newStatus !== 'LOST') {
           await prisma.property.update({
             where: { id: task.propertyId },
             data: { status: 'RENOVATING' }
@@ -103,13 +103,13 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
         if (process.env.GHL_API_TOKEN) {
           let ghlPipelineStageId: string = "";
           
-          if (newStatus === 'PENDING') {
+          if (newStatus === 'PENDING_ESTIMATE' || newStatus === 'UNASSIGNED') {
             ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID || "";
-          } else if (newStatus === 'IN_PROGRESS') {
+          } else if (newStatus === 'IN_PROGRESS' || newStatus === 'ASSIGNED_OR_TO_DO') {
             ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID || "";
-          } else if (newStatus === 'COMPLETED') {
+          } else if (newStatus === 'PENDING_INSPECTION_OR_QA' || newStatus === 'INVOICE_SUBMITTED' || newStatus === 'WON') {
             ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID || "";
-          } else if (newStatus === 'CANCELLED') {
+          } else if (newStatus === 'LOST') {
             ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID || "";
           }
 
@@ -356,7 +356,7 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
           propertyId, 
           subcontractorId: subcontractorId || null, 
           description, 
-          status: 'PENDING' 
+          status: subcontractorId ? 'PENDING_ESTIMATE' : 'UNASSIGNED' 
         }
       });
       
@@ -420,14 +420,14 @@ export async function saveProperty(data: { address: string; taskDesc?: string; c
       }
     });
 
-    // Si se agrego una descripcion de tarea, la creamos y vinculamos a la propiedad
+    // Si se agregó una descripción de tarea, la creamos y vinculamos a la propiedad
     if (data.taskDesc) {
       await prisma.task.create({
         data: {
           propertyId: property.id,
           description: data.taskDesc,
           subcontractorId: data.contractorId || null,
-          status: 'PENDING'
+          status: data.contractorId ? 'PENDING_ESTIMATE' : 'UNASSIGNED'
         }
       });
     }

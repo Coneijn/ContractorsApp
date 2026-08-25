@@ -125,10 +125,15 @@ const [isUpdating, setIsUpdating] = useState(false);
                 className="w-full bg-slate-900 text-slate-200 text-[13px] px-3 py-2.5 rounded-lg outline-none border border-slate-600 mb-4 focus:border-yellow-400"
               >
                 <option value="" disabled>{t.common?.select || 'Select...'}</option>
-                <option value="PENDING">{t.propertyCard.statusPending}</option>
-                <option value="IN_PROGRESS">{t.propertyCard.statusInProgress}</option>
-                <option value="COMPLETED">{t.propertyCard.statusCompleted}</option>
-                <option value="OTHER">⚡ {t.common?.other || 'Other...'}</option>
+                <option value="PENDING_ESTIMATE">Pending Estimate</option>
+                <option value="ASSIGNED_OR_TO_DO">Assigned / To Do</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="PENDING_INSPECTION_OR_QA">Pending Inspection / QA</option>
+                <option value="INVOICE_SUBMITTED">Invoice Submitted</option>
+                <option value="UNASSIGNED">Unassigned</option>
+                <option value="WON">Won (Completed)</option>
+                <option value="LOST">Lost (Cancelled)</option>
+                <option value="OTHER">  {t.common?.other || 'Other...'}</option>
               </select>
             ) : (
               <input 

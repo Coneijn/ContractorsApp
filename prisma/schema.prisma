@@ -31,10 +31,15 @@ enum PropertyStatus {
 }
 
 enum TaskStatus {
-  PENDING
+  PENDING_ESTIMATE
+  ASSIGNED_OR_TO_DO
   IN_PROGRESS
-  COMPLETED
-  CANCELLED
+  PENDING_INSPECTION_OR_QA
+  INVOICE_SUBMITTED
+  UNASSIGNED
+  WON
+  LOST
+  OTHER
 }
 
 enum EstimateStatus {
@@ -202,7 +207,7 @@ model Task {
   propertyId       String
   subcontractorId  String?     // Opcional hasta que se le asigne a alguien
   description      String      // Ej. "Cortar el pasto en Brotherwood"
-  status           TaskStatus  @default(PENDING)
+  status           TaskStatus  @default(UNASSIGNED)
   dueDate          DateTime?
   lastContactedAt  DateTime?   // Para las alertas de "han pasado 3 días sin noticias"
   createdAt        DateTime    @default(now())

@@ -43,8 +43,8 @@ export default function PropertiesTab({ properties, onAssign, onAddProperty }: P
             ) : (
               properties.filter(p => p.status === 'RENOVATING').flatMap((prop) => 
                 prop.tasks.filter((t: any) => t.subcontractor).map((task: any) => {
-                  let visualStatus = task.status === 'IN_PROGRESS' ? 'in-progress' : 'scheduled';
-                  let badgeText = task.status === 'IN_PROGRESS' ? t.badges.inProgress : t.badges.scheduled;
+                  let visualStatus = (task.status === 'IN_PROGRESS' || task.status === 'ASSIGNED_OR_TO_DO') ? 'in-progress' : 'scheduled';
+                  let badgeText = (task.status === 'IN_PROGRESS' || task.status === 'ASSIGNED_OR_TO_DO') ? t.badges.inProgress : t.badges.scheduled;
 
                   const amountInfo = prop.estimates?.find((e: any) => e.status === 'APPROVED' || e.subcontractorId === task.subcontractor.id)?.amount 
                                     || prop.invoices?.find((i: any) => i.subcontractorId === task.subcontractor.id)?.agreedAmount;
