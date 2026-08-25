@@ -1,432 +1,1328 @@
-// prisma/seed.ts
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Prisma } from '@prisma/client';
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Limpiando base de datos e iniciando la siembra profunda...')
+  console.log('🌱 Limpiando base de datos...');
+  
+  // Limpieza en orden inverso para evitar conflictos de Foreign Keys
+  await prisma.activityLog.deleteMany();
+  await prisma.invoicePayment.deleteMany();
+  await prisma.agreement.deleteMany();
+  await prisma.estimate.deleteMany();
+  await prisma.media.deleteMany();
+  await prisma.task.deleteMany();
+  await prisma.comparable.deleteMany();
+  await prisma.conditionNote.deleteMany();
+  await prisma.property.deleteMany();
+  await prisma.subcontractor.deleteMany();
+  await prisma.user.deleteMany();
 
-  await prisma.activityLog.deleteMany()
-  await prisma.media.deleteMany()
-  await prisma.invoicePayment.deleteMany()
-  await prisma.agreement.deleteMany()
-  await prisma.estimate.deleteMany()
-  await prisma.task.deleteMany()
-  await prisma.conditionNote.deleteMany() 
-  await prisma.comparable.deleteMany()    
-  await prisma.property.deleteMany()
-  await prisma.subcontractor.deleteMany()
+  console.log('🌱 Insertando datos respaldados...');
 
-  // 1. Crear Contratistas (Aprobados y No Aprobados)
-  const subcontractorsData = [
-    { key: 'mario', name: 'Mario', company: '4JL Remodeling', whatsapp: '+19018211502', email: null, trade: 'Remodeling', status: 'ACTIVE' },
-    { key: 'tania', name: 'Tania', company: 'Independiente', whatsapp: '+17064614750', email: null, trade: 'Painting & Rehab', status: 'ACTIVE' },
-    { key: 'luisFelipe', name: 'Luis Felipe Hernandez', company: 'Felipe Remodeling M&Solution LLC', whatsapp: '+13522849537', email: null, trade: 'Remodeling', status: 'ACTIVE' },
-    { key: 'alfredo', name: 'Alfredo Meza', company: 'Independiente', whatsapp: '+10000000001', email: null, trade: 'General', status: 'INACTIVE' },
-    { key: 'jose', name: 'José Villasmin', company: 'Independiente', whatsapp: '+19015087651', email: null, trade: 'General', status: 'INACTIVE' },
-    { key: 'johnny', name: 'Johnny', company: 'VSL Landscape', whatsapp: '+19014984442', email: null, trade: 'Lawn Mowing · Landscaping', status: 'ACTIVE' },
-    { key: 'bill', name: 'Bill Jackson', company: 'Midtown Hardwood, LLC', whatsapp: '+19014614787', email: 'midtownhardwood2044@gmail.com', trade: 'Hardwood Floors', status: 'ACTIVE' },
-    { key: 'delmar', name: 'Delmar Castro', company: 'Independiente', whatsapp: '+19016481313', email: null, trade: 'Painting · Ceramic Flooring', status: 'ACTIVE' },
-    { key: 'mauricio', name: 'Mauricio Gonzalez', company: 'Independiente', whatsapp: '+19013152572', email: null, trade: 'Floor Installation', status: 'ACTIVE' },
-    { key: 'martha', name: 'Martha Cruz', company: 'Independiente', whatsapp: '+19018334472', email: null, trade: 'Painting', status: 'ACTIVE' },
-    { key: 'alan', name: 'Alan Perez', company: 'Independiente', whatsapp: '+19015905906', email: null, trade: 'Roofing · Siding · Cladding', status: 'ACTIVE' },
-    { key: 'rony', name: 'Rony', company: 'Independiente', whatsapp: '+19014560481', email: null, trade: 'Painting · Other services (TBD)', status: 'ACTIVE' },
-    { key: 'hector', name: 'Hector Agustin', company: 'Independiente', whatsapp: '+19015906373', email: null, trade: 'Full Remodeling · Floors · Roofing', status: 'ACTIVE' },
-    { key: 'wilmer', name: 'Wilmer Maldonado', company: 'Independiente', whatsapp: '+19012709696', email: null, trade: 'Flooring · Painting · Ceramics · Trim Carpentry · Roofing', status: 'ACTIVE' },
-    { key: 'guevara', name: 'Guevara', company: 'Independiente', whatsapp: '+19018717105', email: null, trade: 'General Contractor (trades TBD)', status: 'ACTIVE' },
-    { key: 'miguel', name: 'Miguel Arias', company: 'Independiente', whatsapp: '+19017416693', email: null, trade: 'Lawn Mowing · Landscaping', status: 'ACTIVE' },
-    { key: 'sonia', name: 'Sonia Yanez', company: 'Independiente', whatsapp: '+19016909819', email: null, trade: 'Painting · Flooring · Glass', status: 'ACTIVE' },
-    { key: 'edgar', name: 'Edgar Gomez', company: 'Independiente', whatsapp: '+19016510780', email: null, trade: 'Painting · Ceramic · Wood Repair · Siding · Drywall', status: 'ACTIVE' },
-    { key: 'eduardo', name: 'Eduardo', company: 'Independiente', whatsapp: '+19015763718', email: null, trade: 'Full Remodel', status: 'INACTIVE' },
-    { key: 'dallan', name: 'Dallan', company: 'Independiente', whatsapp: '+16624205747', email: null, trade: 'N/A', status: 'INACTIVE' },
-    { key: 'moises', name: 'Moisés', company: 'Independiente', whatsapp: '+19010000002', email: null, trade: 'General Renovation / Painting', status: 'ACTIVE' }
-  ]
+  // 1. Usuarios
+  await prisma.user.createMany({
+    data: [],
+  });
 
-  const subMap: Record<string, string> = {}
-  for (const sub of subcontractorsData) {
-    const createdSub = await prisma.subcontractor.create({
-      data: {
-        name: sub.name,
-        company: sub.company,
-        whatsappNumber: sub.whatsapp,
-        email: sub.email,
-        tradeSpecialty: sub.trade,
-        hasW9: false,
-        status: sub.status as 'ACTIVE' | 'INACTIVE',
-      },
-    })
-    subMap[sub.key] = createdSub.id
+  // 2. Subcontratistas
+  await prisma.subcontractor.createMany({
+    data: [
+  {
+    "id": "f3a63049-cebd-4a55-b945-267fdfabe582",
+    "name": "Mario",
+    "company": "4JL Remodeling",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Remodeling",
+    "whatsappNumber": "+19018211502",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.779Z",
+    "updatedAt": "2026-08-25T00:24:18.779Z"
+  },
+  {
+    "id": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "name": "Tania",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Painting & Rehab",
+    "whatsappNumber": "+17064614750",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.783Z",
+    "updatedAt": "2026-08-25T00:24:18.783Z"
+  },
+  {
+    "id": "e4b993c9-de54-4040-82a2-ace50bf0c1c7",
+    "name": "Luis Felipe Hernandez",
+    "company": "Felipe Remodeling M&Solution LLC",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Remodeling",
+    "whatsappNumber": "+13522849537",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.786Z",
+    "updatedAt": "2026-08-25T00:24:18.786Z"
+  },
+  {
+    "id": "fabf0f36-9117-4912-b488-c680b7abe446",
+    "name": "Alfredo Meza",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "General",
+    "whatsappNumber": "+10000000001",
+    "status": "INACTIVE",
+    "createdAt": "2026-08-25T00:24:18.789Z",
+    "updatedAt": "2026-08-25T00:24:18.789Z"
+  },
+  {
+    "id": "8e773ae7-fee5-434f-bdbe-a5a5e1bf2d1c",
+    "name": "José Villasmin",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "General",
+    "whatsappNumber": "+19015087651",
+    "status": "INACTIVE",
+    "createdAt": "2026-08-25T00:24:18.792Z",
+    "updatedAt": "2026-08-25T00:24:18.792Z"
+  },
+  {
+    "id": "5ae46366-d60a-4728-9613-866c6a1abdf8",
+    "name": "Johnny",
+    "company": "VSL Landscape",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Lawn Mowing · Landscaping",
+    "whatsappNumber": "+19014984442",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.795Z",
+    "updatedAt": "2026-08-25T00:24:18.795Z"
+  },
+  {
+    "id": "ba27c6d9-02d7-4287-9377-1f22507bf8f4",
+    "name": "Bill Jackson",
+    "company": "Midtown Hardwood, LLC",
+    "email": "midtownhardwood2044@gmail.com",
+    "hasW9": false,
+    "tradeSpecialty": "Hardwood Floors",
+    "whatsappNumber": "+19014614787",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.798Z",
+    "updatedAt": "2026-08-25T00:24:18.798Z"
+  },
+  {
+    "id": "d1bf6e88-a903-4a97-acc6-573c39b0dcdd",
+    "name": "Delmar Castro",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Painting · Ceramic Flooring",
+    "whatsappNumber": "+19016481313",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.801Z",
+    "updatedAt": "2026-08-25T00:24:18.801Z"
+  },
+  {
+    "id": "1344d048-5cfb-4c8d-a957-2cca4c2e8649",
+    "name": "Mauricio Gonzalez",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Floor Installation",
+    "whatsappNumber": "+19013152572",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.803Z",
+    "updatedAt": "2026-08-25T00:24:18.803Z"
+  },
+  {
+    "id": "62dc4e50-74c5-4269-9e8c-d95a36cba985",
+    "name": "Martha Cruz",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Painting",
+    "whatsappNumber": "+19018334472",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.806Z",
+    "updatedAt": "2026-08-25T00:24:18.806Z"
+  },
+  {
+    "id": "9e07f03f-65a4-48e5-a94c-0ce8d4d929ae",
+    "name": "Alan Perez",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Roofing · Siding · Cladding",
+    "whatsappNumber": "+19015905906",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.809Z",
+    "updatedAt": "2026-08-25T00:24:18.809Z"
+  },
+  {
+    "id": "da6a6819-3ce9-4543-900d-5e2ed2a0bbc3",
+    "name": "Rony",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Painting · Other services (TBD)",
+    "whatsappNumber": "+19014560481",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.811Z",
+    "updatedAt": "2026-08-25T00:24:18.811Z"
+  },
+  {
+    "id": "0111cf5c-92cf-4106-a714-6c29fb8e126f",
+    "name": "Hector Agustin",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Full Remodeling · Floors · Roofing",
+    "whatsappNumber": "+19015906373",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.814Z",
+    "updatedAt": "2026-08-25T00:24:18.814Z"
+  },
+  {
+    "id": "4686f045-14e8-4714-954f-629605942065",
+    "name": "Wilmer Maldonado",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Flooring · Painting · Ceramics · Trim Carpentry · Roofing",
+    "whatsappNumber": "+19012709696",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.819Z",
+    "updatedAt": "2026-08-25T00:24:18.819Z"
+  },
+  {
+    "id": "203566f7-fa4a-4a68-bd46-e69257ccc3d0",
+    "name": "Guevara",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "General Contractor (trades TBD)",
+    "whatsappNumber": "+19018717105",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.823Z",
+    "updatedAt": "2026-08-25T00:24:18.823Z"
+  },
+  {
+    "id": "2ccd7d93-7bb3-4718-bb8c-5c0dc5c67176",
+    "name": "Miguel Arias",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Lawn Mowing · Landscaping",
+    "whatsappNumber": "+19017416693",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.826Z",
+    "updatedAt": "2026-08-25T00:24:18.826Z"
+  },
+  {
+    "id": "933dea17-361e-4b21-919b-cf9ce920263a",
+    "name": "Sonia Yanez",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Painting · Flooring · Glass",
+    "whatsappNumber": "+19016909819",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.828Z",
+    "updatedAt": "2026-08-25T00:24:18.828Z"
+  },
+  {
+    "id": "1cadb8b6-9bf9-40e1-8ee2-b710ba0a0904",
+    "name": "Edgar Gomez",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Painting · Ceramic · Wood Repair · Siding · Drywall",
+    "whatsappNumber": "+19016510780",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.830Z",
+    "updatedAt": "2026-08-25T00:24:18.830Z"
+  },
+  {
+    "id": "560b1ccb-afad-4547-be76-b955d66f081c",
+    "name": "Eduardo",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "Full Remodel",
+    "whatsappNumber": "+19015763718",
+    "status": "INACTIVE",
+    "createdAt": "2026-08-25T00:24:18.832Z",
+    "updatedAt": "2026-08-25T00:24:18.832Z"
+  },
+  {
+    "id": "75cb97a4-55cb-4eb3-b35c-3d6742072b26",
+    "name": "Dallan",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "N/A",
+    "whatsappNumber": "+16624205747",
+    "status": "INACTIVE",
+    "createdAt": "2026-08-25T00:24:18.834Z",
+    "updatedAt": "2026-08-25T00:24:18.834Z"
+  },
+  {
+    "id": "56525b22-a707-4781-ba5d-ffb66b9560c2",
+    "name": "Moisés",
+    "company": "Independiente",
+    "email": null,
+    "hasW9": false,
+    "tradeSpecialty": "General Renovation / Painting",
+    "whatsappNumber": "+19010000002",
+    "status": "ACTIVE",
+    "createdAt": "2026-08-25T00:24:18.836Z",
+    "updatedAt": "2026-08-25T00:24:18.836Z"
   }
+],
+  });
 
-  // 2. Propiedades Activas y Completas con todos los datos detallados de los HTML
-  await prisma.property.create({
-    data: {
-      address: '375 Sherburne',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      beds: 3,
-      baths: 2.5,
-      sqft: 2678,
-      yearBuilt: 1985,
-      county: 'Shelby County, TN',
-      strategy: 'Flip',
-      isRaisingCapital: true,
-      closeDate: new Date('2026-07-10T12:00:00Z'),
-      purchasePrice: 225000.00,
-      avm: 375000.00,
-      loanLender: 'Kiavi Funding, Inc.',
-      loanAmount: 248400.00,
-      loanRate: '8.95%',
-      loanHoldback: 41400.00,
-      tasks: {
-        create: [
-          { description: 'Interior complete Aug 4 · exterior TBD', subcontractorId: subMap['mario'], status: 'IN_PROGRESS' }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '2175 Burlingate Dr',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      beds: 4,
-      baths: 2.5,
-      sqft: 2284,
-      yearBuilt: 1978,
-      county: 'Shelby County, TN',
-      strategy: 'Lease Purchase',
-      isRaisingCapital: true,
-      closeDate: new Date('2026-07-15T12:00:00Z'),
-      purchasePrice: 182000.00,
-      sellerName: 'Therese Murray',
-      loanLender: 'Kiavi Funding, Inc.',
-      loanAmount: 225200.00,
-      loanRate: '8.95%',
-      loanMonthly: 1221.68,
-      loanMaturity: new Date('2027-08-01T12:00:00Z'),
-      loanHoldback: 61400.00,
-      tasks: {
-        create: [
-          { description: 'Punch list touch-ups & driveway power wash in progress with Luis Felipe', subcontractorId: subMap['luisFelipe'], status: 'IN_PROGRESS' }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '8072 Bensford Ln',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      beds: 3,
-      baths: 2,
-      sqft: 1322,
-      yearBuilt: 1998,
-      county: 'Shelby County, TN',
-      strategy: 'Flip',
-      isRaisingCapital: true,
-      closeDate: new Date('2026-07-31T12:00:00Z'),
-      purchasePrice: 140000.00,
-      avm: 222000.00,
-      sellerName: 'Rita C. Harris',
-      loanLender: 'Kairos, LLC',
-      loanAmount: 165000.00,
-      loanRate: '10%',
-      loanMaturity: new Date('2027-03-01T12:00:00Z'),
-      loanHoldback: 25000.00,
-      tasks: {
-        create: [
-          { description: 'Paint in/out, replace misc items, deep clean, fix lights, show-ready', subcontractorId: subMap['tania'], status: 'PENDING_ESTIMATE' }
-        ]
-      },
-      estimates: {
-        create: [
-          { subcontractorId: subMap['tania'], workDescription: 'Paint in/out, replace misc items, deep clean, fix lights, show-ready', amount: 4500.00, status: 'APPROVED' }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '10026 Loftin Dr',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      county: 'DeSoto County, MS',
-      strategy: 'Flip',
-      isRaisingCapital: true,
-      closeDate: new Date('2026-08-03T12:00:00Z'),
-      purchasePrice: 240000.00,
-      sellerName: 'Rachel Baxter',
-      loanLender: 'Kiavi Funding, Inc.',
-      loanAmount: 249800.00,
-      loanRate: '8.95%',
-      loanMaturity: new Date('2027-09-01T12:00:00Z'),
-      loanHoldback: 33800.00,
-      tasks: {
-        create: [
-          { description: 'Final quote pending — after Sherburne wraps', subcontractorId: subMap['mario'], status: 'PENDING_ESTIMATE' }
-        ]
-      },
-      conditionNotes: {
-        create: [
-          { category: 'Roof', description: 'Needs full replacement — visibly old', isCritical: true },
-          { category: 'Carpet', description: 'Needs new carpet throughout', isCritical: false },
-          { category: 'Fascia', description: 'Some fascia boards need repair', isCritical: false },
-          { category: 'Ceilings', description: 'Damage from prior leaks — needs repair', isCritical: true },
-          { category: 'Bathroom', description: 'One bathroom sink broken', isCritical: true }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '7099 Tranquill Creek Dr',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      beds: 3,
-      baths: 2,
-      sqft: 1731,
-      yearBuilt: 1985,
-      county: 'Shelby County, TN',
-      subdivision: 'Green Creek',
-      parcelId: '093703 B00045',
-      strategy: 'Rental',
-      closeDate: new Date('2026-07-29T12:00:00Z'),
-      purchasePrice: 150000.00,
-      avm: 221000.00,
-      estRent: 1820.00,
-      sellerName: 'Linda Clifton f.k.a. Linda Augusta',
-      loanLender: 'Susan Sledd',
-      loanAmount: 185000.00,
-      loanRate: '12%',
-      loanMonthly: 1850.00,
-      loanMaturity: new Date('2027-02-01T12:00:00Z'),
-      tasks: {
-        create: [
-          { description: 'Bid received $7,670 · Aug 4, 2026 · awaiting Spencer approval', subcontractorId: subMap['tania'], status: 'PENDING_ESTIMATE' }
-        ]
-      },
-      estimates: {
-        create: [
-          { subcontractorId: subMap['tania'], workDescription: 'Interior paint, trim/doors/baseboards, sink repair, clean & haul, lights, floor repair, exterior paint', amount: 7670.00, status: 'UNDER_REVIEW' }
-        ]
-      },
-      conditionNotes: {
-        create: [
-          { category: 'Roof', description: 'Repair leak at master bathroom skylight', isCritical: true },
-          { category: 'Flooring', description: 'Repair wood flooring in living room and bedrooms, replace carpet with matching wood flooring', isCritical: false }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '5353 Derron Ln',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      county: 'Shelby County, TN',
-      parcelId: '0704700002',
-      strategy: 'Lease Purchase',
-      closeDate: new Date('2026-07-13T12:00:00Z'),
-      purchasePrice: 75000.00,
-      sellerName: 'Michael & Phylicia Rahming',
-      loanLender: 'Kairos, LLC',
-      loanAmount: 150000.00,
-      loanRate: '10%',
-      loanMonthly: 1250.00,
-      loanMaturity: new Date('2027-05-01T12:00:00Z'),
-      loanHoldback: 45000.00,
-      tasks: {
-        create: [
-          { description: 'Next after Burlingate · roof & subfloor rehab underway', subcontractorId: subMap['luisFelipe'], status: 'PENDING_ESTIMATE' }
-        ]
-      },
-      estimates: {
-        create: [
-          { subcontractorId: subMap['mario'], workDescription: 'Exterior: repair siding, power wash, paint, caulking (labor only)', amount: 6500.00, status: 'UNDER_REVIEW' },
-          { subcontractorId: subMap['alfredo'], workDescription: 'Exterior: siding, soffit, power wash, paint, gutters (labor only)', amount: 6000.00, status: 'UNDER_REVIEW' },
-          { subcontractorId: subMap['jose'], workDescription: 'Exterior: demo siding/fascia, reinstall siding + caulk + paint, full power wash', amount: 7000.00, status: 'UNDER_REVIEW' }
-        ]
-      }
-    }
-  })
-
-  // 3. Propiedades Completadas y Vendidas (Past / Completed Projects)
-  await prisma.property.create({
-    data: {
-      address: '1566 Arcadia St',
-      status: 'COMPLETED',
-      county: 'Shelby County, TN',
-      updatedAt: new Date('2026-08-04T12:00:00Z'),
-      tasks: {
-        create: [
-          { description: 'Paint, carpet removal, cabinet work', subcontractorId: subMap['tania'], status: 'WON', updatedAt: new Date('2026-08-04T12:00:00Z') }
-        ]
-      },
-      estimates: {
-        create: [
-          { subcontractorId: subMap['moises'], workDescription: 'Full interior renovation: painting ($3,900), wallpaper removal ($1,200), sheetrock ($2,200), pressure washing ($200)', amount: 7500.00, status: 'REJECTED' }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '749 Clearview Cove',
-      status: 'COMPLETED',
-      propertyType: 'Single Family',
-      beds: 3,
-      baths: 2,
-      sqft: 1879,
-      yearBuilt: 2004,
-      county: 'DeSoto County, MS',
-      strategy: 'Rental',
-      closeDate: new Date('2026-07-09T12:00:00Z'),
-      purchasePrice: 180000.00,
-      sellerName: 'David Young Owens',
-      loanLender: 'NextGen Growth, LLC',
-      loanAmount: 215000.00,
-      loanRate: '12%',
-      loanMonthly: 2115.00,
-      loanMaturity: new Date('2026-12-01T12:00:00Z'),
-      tenantName: 'Elvis Sierra & Osvaldo Canseco',
-      leaseTerm: 'Owner Finance 30 Years',
-      updatedAt: new Date('2026-07-31T12:00:00Z'),
-      tasks: {
-        create: [
-          { description: 'Full rehab (paint, clean, show-ready) and owner finance sale executed', subcontractorId: subMap['tania'], status: 'WON', updatedAt: new Date('2026-07-31T12:00:00Z') }
-        ]
-      }
-    }
-  })
-
-  await prisma.property.create({
-    data: {
-      address: '9059 Cairn Ridge Dr',
-      status: 'COMPLETED',
-      propertyType: 'Single Family',
-      subdivision: 'Germantown',
-      county: 'Shelby County, TN',
-      updatedAt: new Date('2026-08-01T12:00:00Z'),
-      tasks: {
-        create: [
-          { description: 'Flooring (remove carpet → LVP ~1,655sqft) + full interior paint', subcontractorId: subMap['mario'], status: 'WON', updatedAt: new Date('2026-01-01T12:00:00Z') },
-          { description: 'Trim trees, mow, mulch, haul trash, dead tree removal', subcontractorId: subMap['johnny'], status: 'WON', updatedAt: new Date('2026-07-28T12:00:00Z') }
-        ]
-      },
-      invoices: {
-        create: [
-          { subcontractorId: subMap['mario'], workDescription: 'Flooring and paint', agreedAmount: 16257.00, requestedAmount: 16257.00, status: 'PAID' },
-          { subcontractorId: subMap['johnny'], workDescription: 'Landscaping', agreedAmount: 1400.00, requestedAmount: 1400.00, status: 'PAID' }
-        ]
-      },
-      estimates: {
-        create: [
-          { subcontractorId: subMap['luisFelipe'], workDescription: 'Interior paint + vinyl flooring (1st & 2nd floor)', amount: 16074.00, status: 'REJECTED' },
-          { subcontractorId: subMap['alfredo'], workDescription: 'Interior paint: ceilings, walls, doors, windows, base/crown + kitchen cabinets (labor only)', amount: 8700.00, status: 'REJECTED' },
-          { subcontractorId: subMap['bill'], workDescription: 'Hardwood floor install 1,360sqft (River King Brighton Birch), demo, adhesive, quarter round, transitions, cleanup', amount: 17444.00, status: 'REJECTED' }
-        ]
-      }
-    }
-  })
-
-  // 4. Propiedades Solo con Cotizaciones Pendientes / Historial de Estimaciones
-  await prisma.property.create({
-    data: {
-      address: '5011 Ridge Tree Dr',
-      status: 'RENOVATING',
-      estimates: {
-        create: [
-          { subcontractorId: subMap['alfredo'], workDescription: 'Interior paint + staining (15 doors, 15 windows, trim) + flooring (material + labor)', amount: 23500.00, status: 'UNDER_REVIEW' },
-          { subcontractorId: subMap['jose'], workDescription: 'Demo, flooring, drywall, paint interior, exterior caulk + paint', amount: 14300.00, status: 'UNDER_REVIEW' },
-          { subcontractorId: subMap['eduardo'], workDescription: 'Full remodel: paint in/out, flooring, drywall repairs, electric, plumbing, HVAC covers, cleanup (labor + materials)', amount: 9500.00, status: 'UNDER_REVIEW' }
-        ]
-      }
-    }
-  })
-
-  // 5. Propiedades Adicionales Cerradas / En proceso (Stevenwoods, Tranquill, Bensford)
-  await prisma.property.create({
-    data: {
-      address: '6851 Stevenwoods Ave',
-      status: 'RENOVATING',
-      propertyType: 'Single Family',
-      subdivision: 'Meadows of Kindlewood',
-      parcelId: '0704700002',
-      county: 'Shelby County, TN',
-      strategy: 'Flip',
-      isRaisingCapital: true,
-      closeDate: new Date('2026-07-31T12:00:00Z'),
-      purchasePrice: 138000.00,
-      sellerName: 'Estate of Roman J. Stewart (8 heirs)',
-      loanLender: 'NextGen Growth, LLC',
-      loanAmount: 172000.00,
-      loanRate: '12%',
-      loanMonthly: 1720.00,
-      loanMaturity: new Date('2027-03-01T12:00:00Z'),
-      tasks: {
-        create: [
-          { description: 'Full renovation scope sent to Tania for quoting', subcontractorId: subMap['tania'], status: 'PENDING_ESTIMATE' }
-        ]
-      },
-      conditionNotes: {
-        create: [
-          { category: 'Bedrooms', description: 'High ceilings/arched window, cluttered, worn mattress, missing ceiling patch, wall marks', isCritical: false },
-          { category: 'Flooring', description: 'Carpet stained/worn', isCritical: false },
-          { category: 'Laundry', description: 'Exposed ducting, rough wall openings, debris', isCritical: true },
-          { category: 'Bathroom', description: 'Usable but dirty, stained sink/vanity, scuffed walls', isCritical: false }
-        ]
-      }
-    }
-  })
-
-  // 6. Propiedades Sin Asignar (Unassigned)
-  const unassignedProperties = [
-    { address: '7274 McVay Rd, Germantown', desc: '$66,500 budget · roof, paint, floors, baths, fixtures', type: 'Single Family', beds: 3, baths: 3, sqft: 1958, yearBuilt: 1949, county: 'Shelby County, TN', price: 225000.00, avm: 366000.00, rent: 1960.00 },
-    { address: '3994 Auburn Rd', desc: 'Rehab budget TBD', type: 'Single Family · Ranch', beds: 3, baths: 2, sqft: 1923, yearBuilt: 1964, county: 'Shelby County, TN', avm: 173000.00, rent: 1390.00 },
-    { address: '6475 Collinwood Rd', desc: 'Closing Aug 17 · scope TBD', type: 'Single Family · Brick Veneer', beds: 3, baths: 2, sqft: 1474, yearBuilt: 1989, county: 'DeSoto County, MS', price: 110000.00, avm: 210000.00, rent: 1610.00 },
-    { address: '8809 Lakeshore Dr', desc: 'Walkthrough pending', type: 'Single Family', county: 'DeSoto County, MS' },
-    { address: '2673 McVay Rd', desc: 'Closing Aug 28 · scope TBD', type: 'Single Family · Brick', beds: 4, baths: 2.5, sqft: 2615, yearBuilt: 1975, county: 'Shelby County, TN', price: 225000.00, avm: 349000.00, rent: 2460.00, raising: true }
-  ]
-
-  for (const unassigned of unassignedProperties) {
-    await prisma.property.create({
-      data: {
-        address: unassigned.address,
-        status: 'RENOVATING',
-        propertyType: unassigned.type,
-        beds: unassigned.beds,
-        baths: unassigned.baths,
-        sqft: unassigned.sqft,
-        yearBuilt: unassigned.yearBuilt,
-        county: unassigned.county,
-        purchasePrice: unassigned.price ? unassigned.price : null,
-        avm: unassigned.avm ? unassigned.avm : null,
-        estRent: unassigned.rent ? unassigned.rent : null,
-        isRaisingCapital: unassigned.raising ? unassigned.raising : false,
-        tasks: {
-          create: [
-            { description: unassigned.desc, status: 'UNASSIGNED' }
-          ]
-        }
-      }
-    })
+  // 3. Propiedades
+  await prisma.property.createMany({
+    data: [
+  {
+    "id": "acc91278-fe45-4634-b684-7828bab18b86",
+    "address": "375 Sherburne",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": 3,
+    "baths": 2.5,
+    "sqft": 2678,
+    "lotSize": null,
+    "yearBuilt": 1985,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Flip",
+    "isRaisingCapital": true,
+    "closeDate": "2026-07-10T12:00:00.000Z",
+    "purchasePrice": "225000",
+    "avm": "375000",
+    "estRent": null,
+    "loanLender": "Kiavi Funding, Inc.",
+    "loanAmount": "248400",
+    "loanRate": "8.95%",
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": "41400",
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.839Z",
+    "updatedAt": "2026-08-25T00:24:18.839Z"
+  },
+  {
+    "id": "805e69fc-bb6a-4017-9a3f-948f9c6c2e57",
+    "address": "2175 Burlingate Dr",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": 4,
+    "baths": 2.5,
+    "sqft": 2284,
+    "lotSize": null,
+    "yearBuilt": 1978,
+    "sellerName": "Therese Murray",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Lease Purchase",
+    "isRaisingCapital": true,
+    "closeDate": "2026-07-15T12:00:00.000Z",
+    "purchasePrice": "182000",
+    "avm": null,
+    "estRent": null,
+    "loanLender": "Kiavi Funding, Inc.",
+    "loanAmount": "225200",
+    "loanRate": "8.95%",
+    "loanMonthly": "1221.68",
+    "loanMaturity": "2027-08-01T12:00:00.000Z",
+    "loanHoldback": "61400",
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.844Z",
+    "updatedAt": "2026-08-25T00:24:18.844Z"
+  },
+  {
+    "id": "31f085c6-b838-4d6d-8b5d-776f882da2fe",
+    "address": "8072 Bensford Ln",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1322,
+    "lotSize": null,
+    "yearBuilt": 1998,
+    "sellerName": "Rita C. Harris",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Flip",
+    "isRaisingCapital": true,
+    "closeDate": "2026-07-31T12:00:00.000Z",
+    "purchasePrice": "140000",
+    "avm": "222000",
+    "estRent": null,
+    "loanLender": "Kairos, LLC",
+    "loanAmount": "165000",
+    "loanRate": "10%",
+    "loanMonthly": null,
+    "loanMaturity": "2027-03-01T12:00:00.000Z",
+    "loanHoldback": "25000",
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.849Z",
+    "updatedAt": "2026-08-25T00:24:18.849Z"
+  },
+  {
+    "id": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "address": "10026 Loftin Dr",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "DeSoto County, MS",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": "Rachel Baxter",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Flip",
+    "isRaisingCapital": true,
+    "closeDate": "2026-08-03T12:00:00.000Z",
+    "purchasePrice": "240000",
+    "avm": null,
+    "estRent": null,
+    "loanLender": "Kiavi Funding, Inc.",
+    "loanAmount": "249800",
+    "loanRate": "8.95%",
+    "loanMonthly": null,
+    "loanMaturity": "2027-09-01T12:00:00.000Z",
+    "loanHoldback": "33800",
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.855Z",
+    "updatedAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "7a110381-9d2f-4633-b53b-2ac8085fb6ea",
+    "address": "7099 Tranquill Creek Dr",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": "Green Creek",
+    "parcelId": "093703 B00045",
+    "propertyType": "Single Family",
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1731,
+    "lotSize": null,
+    "yearBuilt": 1985,
+    "sellerName": "Linda Clifton f.k.a. Linda Augusta",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Rental",
+    "isRaisingCapital": false,
+    "closeDate": "2026-07-29T12:00:00.000Z",
+    "purchasePrice": "150000",
+    "avm": "221000",
+    "estRent": "1820",
+    "loanLender": "Susan Sledd",
+    "loanAmount": "185000",
+    "loanRate": "12%",
+    "loanMonthly": "1850",
+    "loanMaturity": "2027-02-01T12:00:00.000Z",
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.860Z",
+    "updatedAt": "2026-08-25T00:24:18.860Z"
+  },
+  {
+    "id": "b1baa43a-6868-41ab-81ec-f81b659e4b7a",
+    "address": "5353 Derron Ln",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": "0704700002",
+    "propertyType": "Single Family",
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": "Michael & Phylicia Rahming",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Lease Purchase",
+    "isRaisingCapital": false,
+    "closeDate": "2026-07-13T12:00:00.000Z",
+    "purchasePrice": "75000",
+    "avm": null,
+    "estRent": null,
+    "loanLender": "Kairos, LLC",
+    "loanAmount": "150000",
+    "loanRate": "10%",
+    "loanMonthly": "1250",
+    "loanMaturity": "2027-05-01T12:00:00.000Z",
+    "loanHoldback": "45000",
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.866Z",
+    "updatedAt": "2026-08-25T00:24:18.866Z"
+  },
+  {
+    "id": "8667205b-18c9-40e4-8d16-963ce098b6ea",
+    "address": "1566 Arcadia St",
+    "status": "COMPLETED",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": null,
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": null,
+    "avm": null,
+    "estRent": null,
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.871Z",
+    "updatedAt": "2026-08-04T12:00:00.000Z"
+  },
+  {
+    "id": "012f104f-68b2-4ecd-a33b-e7acd1c5b409",
+    "address": "749 Clearview Cove",
+    "status": "COMPLETED",
+    "accessCodeOrLockbox": null,
+    "county": "DeSoto County, MS",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1879,
+    "lotSize": null,
+    "yearBuilt": 2004,
+    "sellerName": "David Young Owens",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Rental",
+    "isRaisingCapital": false,
+    "closeDate": "2026-07-09T12:00:00.000Z",
+    "purchasePrice": "180000",
+    "avm": null,
+    "estRent": null,
+    "loanLender": "NextGen Growth, LLC",
+    "loanAmount": "215000",
+    "loanRate": "12%",
+    "loanMonthly": "2115",
+    "loanMaturity": "2026-12-01T12:00:00.000Z",
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": "Elvis Sierra & Osvaldo Canseco",
+    "leaseTerm": "Owner Finance 30 Years",
+    "createdAt": "2026-08-25T00:24:18.876Z",
+    "updatedAt": "2026-07-31T12:00:00.000Z"
+  },
+  {
+    "id": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "address": "9059 Cairn Ridge Dr",
+    "status": "COMPLETED",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": "Germantown",
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": null,
+    "avm": null,
+    "estRent": null,
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-08-01T12:00:00.000Z"
+  },
+  {
+    "id": "920ea0cc-a728-4aab-b25a-d005c131b50a",
+    "address": "5011 Ridge Tree Dr",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": null,
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": null,
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": null,
+    "avm": null,
+    "estRent": null,
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.886Z",
+    "updatedAt": "2026-08-25T00:24:18.886Z"
+  },
+  {
+    "id": "d476c864-9a4d-4d4f-b0f6-fe7e64a69a6d",
+    "address": "6851 Stevenwoods Ave",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": "Meadows of Kindlewood",
+    "parcelId": "0704700002",
+    "propertyType": "Single Family",
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": "Estate of Roman J. Stewart (8 heirs)",
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": "Flip",
+    "isRaisingCapital": true,
+    "closeDate": "2026-07-31T12:00:00.000Z",
+    "purchasePrice": "138000",
+    "avm": null,
+    "estRent": null,
+    "loanLender": "NextGen Growth, LLC",
+    "loanAmount": "172000",
+    "loanRate": "12%",
+    "loanMonthly": "1720",
+    "loanMaturity": "2027-03-01T12:00:00.000Z",
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.891Z",
+    "updatedAt": "2026-08-25T00:24:18.891Z"
+  },
+  {
+    "id": "94ffa030-058b-46b8-874b-c29832110375",
+    "address": "7274 McVay Rd, Germantown",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": 3,
+    "baths": 3,
+    "sqft": 1958,
+    "lotSize": null,
+    "yearBuilt": 1949,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": "225000",
+    "avm": "366000",
+    "estRent": "1960",
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.896Z",
+    "updatedAt": "2026-08-25T00:24:18.896Z"
+  },
+  {
+    "id": "16d3ed5d-6d90-4919-95d6-927b1a2dc1af",
+    "address": "3994 Auburn Rd",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family · Ranch",
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1923,
+    "lotSize": null,
+    "yearBuilt": 1964,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": null,
+    "avm": "173000",
+    "estRent": "1390",
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.900Z",
+    "updatedAt": "2026-08-25T00:24:18.900Z"
+  },
+  {
+    "id": "85bbdf6a-616e-41e8-9714-0ae55b56b517",
+    "address": "6475 Collinwood Rd",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "DeSoto County, MS",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family · Brick Veneer",
+    "beds": 3,
+    "baths": 2,
+    "sqft": 1474,
+    "lotSize": null,
+    "yearBuilt": 1989,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": "110000",
+    "avm": "210000",
+    "estRent": "1610",
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.904Z",
+    "updatedAt": "2026-08-25T00:24:18.904Z"
+  },
+  {
+    "id": "0aabbb63-4393-4444-87a0-d9a40487a388",
+    "address": "8809 Lakeshore Dr",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "DeSoto County, MS",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family",
+    "beds": null,
+    "baths": null,
+    "sqft": null,
+    "lotSize": null,
+    "yearBuilt": null,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": false,
+    "closeDate": null,
+    "purchasePrice": null,
+    "avm": null,
+    "estRent": null,
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.907Z",
+    "updatedAt": "2026-08-25T00:24:18.907Z"
+  },
+  {
+    "id": "b3fad419-9f0b-46ec-a376-2d33c3c1371a",
+    "address": "2673 McVay Rd",
+    "status": "RENOVATING",
+    "accessCodeOrLockbox": null,
+    "county": "Shelby County, TN",
+    "subdivision": null,
+    "parcelId": null,
+    "propertyType": "Single Family · Brick",
+    "beds": 4,
+    "baths": 2.5,
+    "sqft": 2615,
+    "lotSize": null,
+    "yearBuilt": 1975,
+    "sellerName": null,
+    "buyerName": "Volunteer Homes, LLC",
+    "strategy": null,
+    "isRaisingCapital": true,
+    "closeDate": null,
+    "purchasePrice": "225000",
+    "avm": "349000",
+    "estRent": "2460",
+    "loanLender": null,
+    "loanAmount": null,
+    "loanRate": null,
+    "loanMonthly": null,
+    "loanMaturity": null,
+    "loanHoldback": null,
+    "loanCashToClose": null,
+    "tenantName": null,
+    "leaseTerm": null,
+    "createdAt": "2026-08-25T00:24:18.911Z",
+    "updatedAt": "2026-08-25T00:24:18.911Z"
   }
+],
+  });
 
-  console.log('✔ Base de datos poblada exitosamente integrando absolutamente todos los datos recopilados de los HTML y el Dashboard.')
+  // 4. Condition Notes
+  await prisma.conditionNote.createMany({
+    data: [
+  {
+    "id": "f0df25ff-2580-46dd-9936-50110295767a",
+    "propertyId": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "category": "Roof",
+    "description": "Needs full replacement — visibly old",
+    "isCritical": true,
+    "createdAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "ec494f98-3da2-4802-bd72-4cf7a5590d11",
+    "propertyId": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "category": "Carpet",
+    "description": "Needs new carpet throughout",
+    "isCritical": false,
+    "createdAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "7ef8d1ac-10dd-48d1-8d50-527d34579e9c",
+    "propertyId": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "category": "Fascia",
+    "description": "Some fascia boards need repair",
+    "isCritical": false,
+    "createdAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "c253bb8f-3134-43b3-b5c3-6a553bdfbaeb",
+    "propertyId": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "category": "Ceilings",
+    "description": "Damage from prior leaks — needs repair",
+    "isCritical": true,
+    "createdAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "c1d4e5f9-5a0b-4293-9096-5744f5240ad5",
+    "propertyId": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "category": "Bathroom",
+    "description": "One bathroom sink broken",
+    "isCritical": true,
+    "createdAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "5ac23c33-226f-4806-aa34-f00f6449f44f",
+    "propertyId": "7a110381-9d2f-4633-b53b-2ac8085fb6ea",
+    "category": "Roof",
+    "description": "Repair leak at master bathroom skylight",
+    "isCritical": true,
+    "createdAt": "2026-08-25T00:24:18.860Z"
+  },
+  {
+    "id": "a326e4c7-dcba-4b67-a728-2de123868742",
+    "propertyId": "7a110381-9d2f-4633-b53b-2ac8085fb6ea",
+    "category": "Flooring",
+    "description": "Repair wood flooring in living room and bedrooms, replace carpet with matching wood flooring",
+    "isCritical": false,
+    "createdAt": "2026-08-25T00:24:18.860Z"
+  },
+  {
+    "id": "932a2438-5dbb-4405-9153-beb26c0f7c6a",
+    "propertyId": "d476c864-9a4d-4d4f-b0f6-fe7e64a69a6d",
+    "category": "Bedrooms",
+    "description": "High ceilings/arched window, cluttered, worn mattress, missing ceiling patch, wall marks",
+    "isCritical": false,
+    "createdAt": "2026-08-25T00:24:18.891Z"
+  },
+  {
+    "id": "5cd7b4e6-f2e6-4e75-88f3-8d27378eaa86",
+    "propertyId": "d476c864-9a4d-4d4f-b0f6-fe7e64a69a6d",
+    "category": "Flooring",
+    "description": "Carpet stained/worn",
+    "isCritical": false,
+    "createdAt": "2026-08-25T00:24:18.891Z"
+  },
+  {
+    "id": "2d88912f-dee0-4f70-a974-933835bc2edc",
+    "propertyId": "d476c864-9a4d-4d4f-b0f6-fe7e64a69a6d",
+    "category": "Laundry",
+    "description": "Exposed ducting, rough wall openings, debris",
+    "isCritical": true,
+    "createdAt": "2026-08-25T00:24:18.891Z"
+  },
+  {
+    "id": "32cda168-7cce-4ede-89c4-851502aea176",
+    "propertyId": "d476c864-9a4d-4d4f-b0f6-fe7e64a69a6d",
+    "category": "Bathroom",
+    "description": "Usable but dirty, stained sink/vanity, scuffed walls",
+    "isCritical": false,
+    "createdAt": "2026-08-25T00:24:18.891Z"
+  }
+],
+  });
+
+  // 5. Comparables
+  await prisma.comparable.createMany({
+    data: [],
+  });
+
+  // 6. Tasks
+  await prisma.task.createMany({
+    data: [
+  {
+    "id": "41a55665-2df4-4706-a66c-846aa09652e4",
+    "propertyId": "acc91278-fe45-4634-b684-7828bab18b86",
+    "subcontractorId": "f3a63049-cebd-4a55-b945-267fdfabe582",
+    "description": "Interior complete Aug 4 · exterior TBD",
+    "status": "IN_PROGRESS",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.839Z",
+    "updatedAt": "2026-08-25T00:24:18.839Z"
+  },
+  {
+    "id": "6ccf4313-b036-4878-b68c-9f051b93752e",
+    "propertyId": "805e69fc-bb6a-4017-9a3f-948f9c6c2e57",
+    "subcontractorId": "e4b993c9-de54-4040-82a2-ace50bf0c1c7",
+    "description": "Punch list touch-ups & driveway power wash in progress with Luis Felipe",
+    "status": "IN_PROGRESS",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.844Z",
+    "updatedAt": "2026-08-25T00:24:18.844Z"
+  },
+  {
+    "id": "45ef21bb-f0b5-4b3f-9226-64f74c808d98",
+    "propertyId": "31f085c6-b838-4d6d-8b5d-776f882da2fe",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "description": "Paint in/out, replace misc items, deep clean, fix lights, show-ready",
+    "status": "PENDING_ESTIMATE",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.849Z",
+    "updatedAt": "2026-08-25T00:24:18.849Z"
+  },
+  {
+    "id": "b4c53f63-bfb8-458d-ae6a-7c0742ef9db8",
+    "propertyId": "47ed6103-fab2-4dab-bcc1-e253235f2e2f",
+    "subcontractorId": "f3a63049-cebd-4a55-b945-267fdfabe582",
+    "description": "Final quote pending — after Sherburne wraps",
+    "status": "PENDING_ESTIMATE",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.855Z",
+    "updatedAt": "2026-08-25T00:24:18.855Z"
+  },
+  {
+    "id": "7b4a4ad9-3671-4982-9550-82d58684741e",
+    "propertyId": "7a110381-9d2f-4633-b53b-2ac8085fb6ea",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "description": "Bid received $7,670 · Aug 4, 2026 · awaiting Spencer approval",
+    "status": "PENDING_ESTIMATE",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.860Z",
+    "updatedAt": "2026-08-25T00:24:18.860Z"
+  },
+  {
+    "id": "5f437d81-17c8-4f57-b8fe-1b6147e89f00",
+    "propertyId": "b1baa43a-6868-41ab-81ec-f81b659e4b7a",
+    "subcontractorId": "e4b993c9-de54-4040-82a2-ace50bf0c1c7",
+    "description": "Next after Burlingate · roof & subfloor rehab underway",
+    "status": "PENDING_ESTIMATE",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.866Z",
+    "updatedAt": "2026-08-25T00:24:18.866Z"
+  },
+  {
+    "id": "7b2cd7bf-e87a-459b-9d4d-8e33fbe742f0",
+    "propertyId": "8667205b-18c9-40e4-8d16-963ce098b6ea",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "description": "Paint, carpet removal, cabinet work",
+    "status": "WON",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.871Z",
+    "updatedAt": "2026-08-04T12:00:00.000Z"
+  },
+  {
+    "id": "0f54d700-6c3e-4b46-a403-f87a4ec163bf",
+    "propertyId": "012f104f-68b2-4ecd-a33b-e7acd1c5b409",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "description": "Full rehab (paint, clean, show-ready) and owner finance sale executed",
+    "status": "WON",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.876Z",
+    "updatedAt": "2026-07-31T12:00:00.000Z"
+  },
+  {
+    "id": "b0c4ebae-08db-40fa-86b6-12d7c23a26e0",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "f3a63049-cebd-4a55-b945-267fdfabe582",
+    "description": "Flooring (remove carpet → LVP ~1,655sqft) + full interior paint",
+    "status": "WON",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-01-01T12:00:00.000Z"
+  },
+  {
+    "id": "34c512be-a393-491d-b8e3-0b469b422731",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "5ae46366-d60a-4728-9613-866c6a1abdf8",
+    "description": "Trim trees, mow, mulch, haul trash, dead tree removal",
+    "status": "WON",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-07-28T12:00:00.000Z"
+  },
+  {
+    "id": "c593c774-ac25-45e2-b459-cb2b202f2ce2",
+    "propertyId": "d476c864-9a4d-4d4f-b0f6-fe7e64a69a6d",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "description": "Full renovation scope sent to Tania for quoting",
+    "status": "PENDING_ESTIMATE",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.891Z",
+    "updatedAt": "2026-08-25T00:24:18.891Z"
+  },
+  {
+    "id": "1ba0cb86-a48d-4816-8ee6-77a157407b53",
+    "propertyId": "94ffa030-058b-46b8-874b-c29832110375",
+    "subcontractorId": null,
+    "description": "$66,500 budget · roof, paint, floors, baths, fixtures",
+    "status": "UNASSIGNED",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.896Z",
+    "updatedAt": "2026-08-25T00:24:18.896Z"
+  },
+  {
+    "id": "b46dce7c-abac-4276-ad51-2cfa1c4164e8",
+    "propertyId": "16d3ed5d-6d90-4919-95d6-927b1a2dc1af",
+    "subcontractorId": null,
+    "description": "Rehab budget TBD",
+    "status": "UNASSIGNED",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.900Z",
+    "updatedAt": "2026-08-25T00:24:18.900Z"
+  },
+  {
+    "id": "699c9276-52e5-4099-a3fa-7aa84b7d30ad",
+    "propertyId": "85bbdf6a-616e-41e8-9714-0ae55b56b517",
+    "subcontractorId": null,
+    "description": "Closing Aug 17 · scope TBD",
+    "status": "UNASSIGNED",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.904Z",
+    "updatedAt": "2026-08-25T00:24:18.904Z"
+  },
+  {
+    "id": "42b4eaf9-c68b-4675-805f-fcdaa2e5f946",
+    "propertyId": "0aabbb63-4393-4444-87a0-d9a40487a388",
+    "subcontractorId": null,
+    "description": "Walkthrough pending",
+    "status": "UNASSIGNED",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.907Z",
+    "updatedAt": "2026-08-25T00:24:18.907Z"
+  },
+  {
+    "id": "2f733468-6df6-4052-9597-997529564800",
+    "propertyId": "b3fad419-9f0b-46ec-a376-2d33c3c1371a",
+    "subcontractorId": null,
+    "description": "Closing Aug 28 · scope TBD",
+    "status": "UNASSIGNED",
+    "dueDate": null,
+    "lastContactedAt": null,
+    "createdAt": "2026-08-25T00:24:18.911Z",
+    "updatedAt": "2026-08-25T00:24:18.911Z"
+  }
+],
+  });
+
+  // 7. Media
+  await prisma.media.createMany({
+    data: [],
+  });
+
+  // 8. Estimates
+  await prisma.estimate.createMany({
+    data: [
+  {
+    "id": "50ad8b03-f868-4120-95f7-b4e2ca1df178",
+    "propertyId": "31f085c6-b838-4d6d-8b5d-776f882da2fe",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "workDescription": "Paint in/out, replace misc items, deep clean, fix lights, show-ready",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "4500",
+    "status": "APPROVED",
+    "createdAt": "2026-08-25T00:24:18.849Z",
+    "updatedAt": "2026-08-25T00:24:18.849Z"
+  },
+  {
+    "id": "bc07ed96-b441-49e7-9576-9940132cf1f9",
+    "propertyId": "7a110381-9d2f-4633-b53b-2ac8085fb6ea",
+    "subcontractorId": "74677a66-37a8-4136-b12a-e4f839c623f9",
+    "workDescription": "Interior paint, trim/doors/baseboards, sink repair, clean & haul, lights, floor repair, exterior paint",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "7670",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.860Z",
+    "updatedAt": "2026-08-25T00:24:18.860Z"
+  },
+  {
+    "id": "9f8b0cdd-18b4-4e09-a7ec-25666da9b069",
+    "propertyId": "b1baa43a-6868-41ab-81ec-f81b659e4b7a",
+    "subcontractorId": "f3a63049-cebd-4a55-b945-267fdfabe582",
+    "workDescription": "Exterior: repair siding, power wash, paint, caulking (labor only)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "6500",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.866Z",
+    "updatedAt": "2026-08-25T00:24:18.866Z"
+  },
+  {
+    "id": "0103056d-1e27-4c25-ae50-81b323623b1f",
+    "propertyId": "b1baa43a-6868-41ab-81ec-f81b659e4b7a",
+    "subcontractorId": "fabf0f36-9117-4912-b488-c680b7abe446",
+    "workDescription": "Exterior: siding, soffit, power wash, paint, gutters (labor only)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "6000",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.866Z",
+    "updatedAt": "2026-08-25T00:24:18.866Z"
+  },
+  {
+    "id": "6b17434c-8d69-42c8-b33d-e7e268ff15d0",
+    "propertyId": "b1baa43a-6868-41ab-81ec-f81b659e4b7a",
+    "subcontractorId": "8e773ae7-fee5-434f-bdbe-a5a5e1bf2d1c",
+    "workDescription": "Exterior: demo siding/fascia, reinstall siding + caulk + paint, full power wash",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "7000",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.866Z",
+    "updatedAt": "2026-08-25T00:24:18.866Z"
+  },
+  {
+    "id": "475a91a0-eb18-463e-8656-bf00504d22a5",
+    "propertyId": "8667205b-18c9-40e4-8d16-963ce098b6ea",
+    "subcontractorId": "56525b22-a707-4781-ba5d-ffb66b9560c2",
+    "workDescription": "Full interior renovation: painting ($3,900), wallpaper removal ($1,200), sheetrock ($2,200), pressure washing ($200)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "7500",
+    "status": "REJECTED",
+    "createdAt": "2026-08-25T00:24:18.871Z",
+    "updatedAt": "2026-08-25T00:24:18.871Z"
+  },
+  {
+    "id": "17c0f979-ac7b-4a59-94d0-9547ceda0bf3",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "e4b993c9-de54-4040-82a2-ace50bf0c1c7",
+    "workDescription": "Interior paint + vinyl flooring (1st & 2nd floor)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "16074",
+    "status": "REJECTED",
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-08-25T00:24:18.880Z"
+  },
+  {
+    "id": "321ee981-e943-446d-9b9a-3e9eed97b831",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "fabf0f36-9117-4912-b488-c680b7abe446",
+    "workDescription": "Interior paint: ceilings, walls, doors, windows, base/crown + kitchen cabinets (labor only)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "8700",
+    "status": "REJECTED",
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-08-25T00:24:18.880Z"
+  },
+  {
+    "id": "d7028e9d-660f-46e6-aa38-62969c846d23",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "ba27c6d9-02d7-4287-9377-1f22507bf8f4",
+    "workDescription": "Hardwood floor install 1,360sqft (River King Brighton Birch), demo, adhesive, quarter round, transitions, cleanup",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "17444",
+    "status": "REJECTED",
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-08-25T00:24:18.880Z"
+  },
+  {
+    "id": "ff791000-f6c2-4329-b440-4996f94f5bb2",
+    "propertyId": "920ea0cc-a728-4aab-b25a-d005c131b50a",
+    "subcontractorId": "fabf0f36-9117-4912-b488-c680b7abe446",
+    "workDescription": "Interior paint + staining (15 doors, 15 windows, trim) + flooring (material + labor)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "23500",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.886Z",
+    "updatedAt": "2026-08-25T00:24:18.886Z"
+  },
+  {
+    "id": "068a2002-8772-49be-befd-af7646364417",
+    "propertyId": "920ea0cc-a728-4aab-b25a-d005c131b50a",
+    "subcontractorId": "8e773ae7-fee5-434f-bdbe-a5a5e1bf2d1c",
+    "workDescription": "Demo, flooring, drywall, paint interior, exterior caulk + paint",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "14300",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.886Z",
+    "updatedAt": "2026-08-25T00:24:18.886Z"
+  },
+  {
+    "id": "026a6b32-09aa-494d-aaa0-13bfb204a6e9",
+    "propertyId": "920ea0cc-a728-4aab-b25a-d005c131b50a",
+    "subcontractorId": "560b1ccb-afad-4547-be76-b955d66f081c",
+    "workDescription": "Full remodel: paint in/out, flooring, drywall repairs, electric, plumbing, HVAC covers, cleanup (labor + materials)",
+    "estimatedStartDate": null,
+    "documentUrl": null,
+    "amount": "9500",
+    "status": "UNDER_REVIEW",
+    "createdAt": "2026-08-25T00:24:18.886Z",
+    "updatedAt": "2026-08-25T00:24:18.886Z"
+  }
+],
+  });
+
+  // 9. Agreements
+  await prisma.agreement.createMany({
+    data: [],
+  });
+
+  // 10. Invoices
+  await prisma.invoicePayment.createMany({
+    data: [
+  {
+    "id": "aafef5f8-f8aa-4044-b3fc-364b539de185",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "f3a63049-cebd-4a55-b945-267fdfabe582",
+    "workDescription": "Flooring and paint",
+    "startDate": null,
+    "finishDate": null,
+    "agreedAmount": "16257",
+    "requestedAmount": "16257",
+    "amountPaid": "0",
+    "invoiceUrl": null,
+    "status": "PAID",
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-08-25T00:24:18.880Z"
+  },
+  {
+    "id": "2f52b78f-0b78-4e61-b52a-8e9c8d3bca89",
+    "propertyId": "58c16ce9-5fbb-488c-bd51-4a5985c0e2a9",
+    "subcontractorId": "5ae46366-d60a-4728-9613-866c6a1abdf8",
+    "workDescription": "Landscaping",
+    "startDate": null,
+    "finishDate": null,
+    "agreedAmount": "1400",
+    "requestedAmount": "1400",
+    "amountPaid": "0",
+    "invoiceUrl": null,
+    "status": "PAID",
+    "createdAt": "2026-08-25T00:24:18.880Z",
+    "updatedAt": "2026-08-25T00:24:18.880Z"
+  }
+],
+  });
+
+  // 11. Activity Logs
+  await prisma.activityLog.createMany({
+    data: [],
+  });
+
+  console.log('✅ Base de datos restaurada exitosamente.');
 }
 
 main()
   .catch((e) => {
-    console.error('✘ Error al ejecutar el seed:', e)
-    process.exit(1)
+    console.error('❌ Error al ejecutar el seed:', e);
+    process.exit(1);
   })
   .finally(async () => {
-    await prisma.$disconnect()
-  })
+    await prisma.$disconnect();
+  });
