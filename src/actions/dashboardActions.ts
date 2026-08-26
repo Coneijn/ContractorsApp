@@ -498,10 +498,16 @@ export async function updatePropertyData(id: string, formData: FormData) {
       purchasePrice: parseNumber(formData.get('purchasePrice')),
       avm: parseNumber(formData.get('avm')),
       estRent: parseNumber(formData.get('estRent')),
+      closeDate: formData.get('closeDate') ? new Date(formData.get('closeDate') as string) : null,
+      isRaisingCapital: formData.get('isRaisingCapital') === 'on',
+      
       loanLender: formData.get('loanLender') as string,
       loanAmount: parseNumber(formData.get('loanAmount')),
       loanRate: formData.get('loanRate') as string,
       loanMonthly: parseNumber(formData.get('loanMonthly')),
+      loanMaturity: formData.get('loanMaturity') ? new Date(formData.get('loanMaturity') as string) : null,
+      loanHoldback: parseNumber(formData.get('loanHoldback')),
+      loanCashToClose: parseNumber(formData.get('loanCashToClose')),
     };
 
     // Limpiar nulos o indefinidos si prefieres no sobreescribir con null
@@ -512,24 +518,71 @@ export async function updatePropertyData(id: string, formData: FormData) {
     });
 
     await prisma.property.update({
-      where: { id },
-      data: updateData
-    });
+        where: { id },
+        data: updateData
+      });
 
-    // Registrar en ActivityLog
-    await prisma.activityLog.create({
-      data: {
-        propertyId: id,
-        actorType: 'USER',
-        actorName: 'Admin', // Idealmente sacar esto de la sesión del usuario autenticado
-        action: 'PROPERTY_UPDATED',
-        description: 'Updated property details via dashboard form.'
+      // 1. Registrar en ActivityLog (Log Manual o Actualización Genérica)
+      const newLog = formData.get('newLog') as string;
+      await prisma.activityLog.create({
+        data: {
+          propertyId: id,
+          actorType: 'USER',
+          actorName: 'Admin', 
+          action: newLog ? 'MANUAL_LOG' : 'PROPERTY_UPDATED',
+          description: newLog ? newLog.trim() : 'Updated property details via dashboard form.'
+        }
+      });
+
+      // 2. Procesar fotos si las hay
+      const photosJson = formData.get('photos') as string;
+      if (photosJson) {
+        const photoUrls = JSON.parse(photosJson);
+        if (Array.isArray(photoUrls) && photoUrls.length > 0) {
+          const safeUrls = filterOwnBucketUrls(photoUrls);
+          if (safeUrls.length > 0) {
+            await prisma.media.createMany({
+              data: safeUrls.map((fileUrl) => ({
+                propertyId: id,
+                fileUrl,
+                uploadedBy: 'Admin',
+              }))
+            });
+          }
+        }
       }
-    });
 
-    revalidatePath(`/admin/property/${id}`);
-    revalidatePath(`/admin/property/${id}/edit`);
-    return { success: true };
+    // 3. Procesar Condition Notes (Reemplazo completo de la lista)
+      const conditionNotesJson = formData.get('conditionNotes') as string;
+      if (conditionNotesJson) {
+        const notes = JSON.parse(conditionNotesJson);
+        
+        // Limpiamos las notas actuales de la propiedad
+        await prisma.conditionNote.deleteMany({
+          where: { propertyId: id }
+        });
+
+        // Insertamos las nuevas
+        if (Array.isArray(notes) && notes.length > 0) {
+          // Filtramos las que estén vacías para no guardar basura
+          const validNotes = notes.filter(n => n.category || n.description);
+          if (validNotes.length > 0) {
+            await prisma.conditionNote.createMany({
+              data: validNotes.map((note: any) => ({
+                propertyId: id,
+                category: note.category || 'General',
+                description: note.description || '',
+                isCritical: Boolean(note.isCritical)
+              }))
+            });
+          }
+        }
+      }
+
+      revalidatePath(`/admin/property/${id}`);
+      revalidatePath(`/admin/property/${id}/edit`);
+
+      return { success: true };
   } catch (error) {
     console.error("Error updating property:", error);
     return { success: false, error: 'Failed to update property' };

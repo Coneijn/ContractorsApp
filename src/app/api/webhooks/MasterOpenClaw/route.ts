@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { REVERSE_GHL_CONTRACTOR_STAGE_MAP } from '@/lib/ghlMapping'; 
 import { 
   PrismaClient, 
   TaskStatus, 
@@ -228,17 +229,8 @@ export async function POST(req: Request) {
 
     // ---> NOTIFICACIÓN A GHL (Sincronización Web -> GHL Vía API v2) <---
     if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_API_TOKEN) {
-      let ghlPipelineStageId: string = "";
-      
-      if (newStatus === 'PENDING_ESTIMATE' || newStatus === 'UNASSIGNED' || target === 'NEW_TASK') {
-        ghlPipelineStageId = process.env.GHL_STAGE_PENDING_ESTIMATE_ID || "";
-      } else if (newStatus === 'IN_PROGRESS' || newStatus === 'ASSIGNED_OR_TO_DO') {
-        ghlPipelineStageId = process.env.GHL_STAGE_IN_PROGRESS_ID || "";
-      } else if (newStatus === 'PENDING_INSPECTION_OR_QA' || newStatus === 'INVOICE_SUBMITTED' || newStatus === 'WON') {
-        ghlPipelineStageId = process.env.GHL_STAGE_PENDING_QA_ID || "";
-      } else if (newStatus === 'LOST' || newStatus === 'CANCELLED') {
-        ghlPipelineStageId = process.env.GHL_STAGE_LOST_ID || "";
-      }
+      const statusToMap = target === 'NEW_TASK' ? 'PENDING_ESTIMATE' : (newStatus || 'UNASSIGNED');
+      const ghlPipelineStageId = REVERSE_GHL_CONTRACTOR_STAGE_MAP[statusToMap] || "";
 
       const appReferenceId = taskId || targetPropertyId; 
       const ghlLocationId = process.env.GHL_LOCATION_ID || "";

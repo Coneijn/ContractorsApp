@@ -140,6 +140,14 @@ model Property {
   tenantName          String?
   leaseTerm           String?
 
+  // -- CLOSING / WORKFLOW CHECKLIST --
+  clPsaSigned         Boolean        @default(false)
+  clAltaFiled         Boolean        @default(false)
+  clLoanDocsFiled     Boolean        @default(false)
+  clClosed            Boolean        @default(false)
+  clRehabComplete     Boolean        @default(false)
+  clBuyerFound        Boolean        @default(false)
+
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -228,6 +236,7 @@ model Media {
   propertyId  String
   taskId      String?  // Opcional: si la foto prueba el avance de una tarea específica
   fileUrl     String   // URL del bucket en S3/Supabase Storage
+  fileType    String   @default("image") // Ej. "image", "pdf", "document"
   uploadedBy  String?  // Puede ser el ID del contratista o del usuario
   createdAt   DateTime @default(now())
 

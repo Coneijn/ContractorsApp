@@ -1,25 +1,15 @@
 // Archivo: app/api/webhooks/ghl/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient, TaskStatus, PropertyStatus } from '@prisma/client';
+import { GHL_CONTRACTOR_STAGE_MAP } from '@/lib/ghlMapping';
 
 const prisma = new PrismaClient();
 
-// Mapeo de nombres o IDs de etapa recibidos desde GHL hacia TaskStatus
 function mapGhlStageToTaskStatus(stage?: string): TaskStatus | undefined {
   if (!stage) return undefined;
-
-  const normalized = stage.trim().toLowerCase();
-
-  if (normalized.includes('pending estimate')) return TaskStatus.PENDING_ESTIMATE;
-  if (normalized.includes('assigned') || normalized.includes('to do')) return TaskStatus.ASSIGNED_OR_TO_DO;
-  if (normalized.includes('in progress')) return TaskStatus.IN_PROGRESS;
-  if (normalized.includes('pending inspection') || normalized.includes('qa')) return TaskStatus.PENDING_INSPECTION_OR_QA;
-  if (normalized.includes('invoice submitted')) return TaskStatus.INVOICE_SUBMITTED;
-  if (normalized.includes('unassigned')) return TaskStatus.UNASSIGNED;
-  if (normalized.includes('won')) return TaskStatus.WON;
-  if (normalized.includes('lost')) return TaskStatus.LOST;
-
-  return undefined;
+  // Buscamos directamente el UUID en tu mapa maestro
+  const mappedStatus = GHL_CONTRACTOR_STAGE_MAP[stage.trim()];
+  return mappedStatus ? (mappedStatus as TaskStatus) : undefined;
 }
 
 export async function POST(req: Request) {
