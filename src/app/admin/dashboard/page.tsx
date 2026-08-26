@@ -1,22 +1,24 @@
 "use client"; 
+
 import { useState, useEffect } from 'react';
-import ContractorCard from '@/components/ContractorCard';
-import PropertyCard from '@/components/PropertyCard';
-import Badge from '@/components/Badge';
+import Image from 'next/image';
 import AssignmentsTab from '@/components/tabs/AssignmentsTab';
 import RosterTab from '@/components/tabs/RosterTab';
 import PropertiesTab from '@/components/tabs/PropertiesTab';
 import PastProjectsTab from '@/components/tabs/PastProjectsTab';
+import DirectoryTab from '@/components/tabs/DirectoryTab';
 import NewAssignmentModal from '@/components/NewAssignmentModal';
 import AddContractorModal from '@/components/AddContractorModal';
 import AddPropertyModal from '@/components/AddPropertyModal';
 import { getActiveAssignments, getContractors } from '@/actions/dashboardActions';
 import { useLanguage } from '@/context/LanguageContext';
-import DirectoryTab from "@/components/tabs/DirectoryTab";
+
+type TabType = 'roster' | 'assignments' | 'properties' | 'pastprojects' | 'directory';
+
 export default function DashboardPage() {
   const { t, language, setLanguage } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState('assignments');
+  const [activeTab, setActiveTab] = useState<TabType>('assignments');
   const [properties, setProperties] = useState<any[]>([]);
   const [contractors, setContractors] = useState<any[]>([]);
   const [rosterFilter, setRosterFilter] = useState<'approved' | 'notUsed' | 'all'>('approved');
@@ -47,6 +49,9 @@ export default function DashboardPage() {
     loadData();
   }, []);
 
+  // Soporte seguro para la traducción de directory mientras se actualizan los tipos del contexto
+  const directoryTabLabel = (t.dashboard.tabs as Record<string, string>)?.directory || (language === 'es' ? 'Directorio' : 'Directory');
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-200 font-sans">
       
@@ -72,41 +77,40 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      <div className="flex bg-slate-800 border-b border-slate-700">
+      <div className="flex bg-slate-800 border-b border-slate-700 overflow-x-auto">
         <button 
           onClick={() => setActiveTab('roster')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors ${activeTab === 'roster' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
+          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'roster' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
         >
           👷 Roster
         </button>
         <button 
           onClick={() => setActiveTab('assignments')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors ${activeTab === 'assignments' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
+          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'assignments' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
         >
           {t.dashboard.tabs.assignments}
         </button>
         <button 
           onClick={() => setActiveTab('properties')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors ${activeTab === 'properties' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
+          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'properties' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
         >
           {t.dashboard.tabs.properties}
         </button>
         <button 
           onClick={() => setActiveTab('pastprojects')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors ${activeTab === 'pastprojects' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
+          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'pastprojects' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
         >
           {t.dashboard.tabs.pastProjects}
         </button>
         <button 
-  onClick={() => setActiveTab('directory')}
-  className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors ${activeTab === 'directory' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
->
-  {t.dashboard.tabs.directory}
-</button>
+          onClick={() => setActiveTab('directory')}
+          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'directory' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
+        >
+          📁 {directoryTabLabel}
+        </button>
       </div>
 
       <main className="max-w-[1100px] mx-auto p-6">
-        
         {activeTab === 'roster' && (
           <RosterTab
              contractors={contractors}
@@ -138,23 +142,24 @@ export default function DashboardPage() {
           <PastProjectsTab properties={properties} />
         )}
 
-
-{activeTab === "directory" && <DirectoryTab />}
+        {activeTab === 'directory' && (
+          <DirectoryTab />
+        )}
       </main>
 
       {/* MODALES GLOBALES */}
       <NewAssignmentModal
         isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          properties={properties}
-          contractors={contractors}
-          defaultPropertyId={defaultPropId}
-          defaultContractorId={defaultContractorId}
-          defaultDescription={defaultDesc}
-          onSuccess={loadData}
-        />
+        onClose={() => setIsModalOpen(false)}
+        properties={properties}
+        contractors={contractors}
+        defaultPropertyId={defaultPropId}
+        defaultContractorId={defaultContractorId}
+        defaultDescription={defaultDesc}
+        onSuccess={loadData}
+      />
 
-        <AddContractorModal
+      <AddContractorModal
         isOpen={isContractorModalOpen}
         onClose={() => setIsContractorModalOpen(false)}
         contractors={contractors}
