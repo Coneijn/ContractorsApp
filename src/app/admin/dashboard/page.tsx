@@ -12,7 +12,7 @@ import AddContractorModal from '@/components/AddContractorModal';
 import AddPropertyModal from '@/components/AddPropertyModal';
 import { getActiveAssignments, getContractors } from '@/actions/dashboardActions';
 import { useLanguage } from '@/context/LanguageContext';
-
+import DirectoryTab from "@/components/tabs/DirectoryTab";
 export default function DashboardPage() {
   const { t, language, setLanguage } = useLanguage();
 
