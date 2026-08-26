@@ -180,21 +180,22 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
         }
 
       }
-    } else {
-      // Si es un estado personalizado ("QUEUED" o texto libre), lo guardamos en el ActivityLog
-      // para no romper la base de datos.
-      if (task) {
-        await prisma.activityLog.create({
-          data: {
-            propertyId: task.propertyId,
-            actorType: 'USER',
-            actorName: 'Admin (Dashboard)', // Podrías cambiar esto dinámicamente si tienes Auth
-            action: 'CUSTOM_STATUS_UPDATE',
-            description: `Estatus personalizado asignado a la tarea: ${newStatus}`,
-          }
-        });
-      }
+    } 
+    
+    // Guardamos en el ActivityLog el intento de cambio de estado para tener trazabilidad completa
+    if (task) {
+      const isChanged = validStatuses.includes(newStatus);
+      await prisma.activityLog.create({
+        data: {
+          propertyId: task.propertyId,
+          actorType: 'USER',
+          actorName: 'Admin (Dashboard)', // Podrías cambiar esto dinámicamente si tienes Auth
+          action: isChanged ? 'STATUS_UPDATE' : 'CUSTOM_STATUS_UPDATE',
+          description: `Estado inicial: ${task.status}. Estado solicitado: ${newStatus}. Cambio realizado: ${isChanged ? 'Sí' : 'No (Estado personalizado, no aplicable en DB)'}`,
+        }
+      });
     }
+
     return { success: true };
   } catch (error) {
     console.error("Error actualizando estatus:", error);
