@@ -97,6 +97,12 @@ export default function DashboardPage() {
         >
           {t.dashboard.tabs.pastProjects}
         </button>
+        <button 
+  onClick={() => setActiveTab('directory')}
+  className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors ${activeTab === 'directory' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
+>
+  {t.dashboard.tabs.directory}
+</button>
       </div>
 
       <main className="max-w-[1100px] mx-auto p-6">
