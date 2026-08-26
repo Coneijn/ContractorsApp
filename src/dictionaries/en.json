@@ -249,6 +249,24 @@
     "newContractor": "-- New Contractor --",
     "optional": "(Optional)"
   },
+  {
+    "directory": {
+      "title": "Internal Directory",
+      "subtitle": "Key contacts for team, vendors, utilities, and city services.",
+      "searchPlaceholder": "Search by name, role, phone, or notes...",
+      "allCategories": "All categories",
+      "noResults": "No contacts found matching your search.",
+      "pending": "Pending",
+      "call": "Call",
+      "categories": {
+        "team": "Team (Spencer's People)",
+        "vendors": "Vendors & Services",
+        "utilities": "Utilities",
+        "dumpster": "Dumpster / Disposal",
+        "emergency": "Emergency / City"
+      }
+    }
+  },
   "flyer": {
     "subtitle": "Volunteer Homes, LLC | SpencerBuysHouses.com",
     "title1": "Send Invoice or Estimate",

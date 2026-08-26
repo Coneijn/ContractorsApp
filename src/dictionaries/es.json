@@ -249,6 +249,21 @@
     "newContractor": "-- Nuevo Contratista --",
     "optional": "(Opcional)"
   },
+  "directory": {
+    "title": "Directorio Interno",
+    "subtitle": "Contactos clave del equipo, proveedores, utilidades y servicios de la ciudad.",
+    "searchPlaceholder": "Buscar por nombre, rol, teléfono o nota...",
+    "allCategories": "Todas las categorías",
+    "noResults": "No se encontraron contactos que coincidan con la búsqueda.",
+    "pending": "Pendiente",
+    "call": "Llamar",
+    "categories": {
+      "team": "Equipo (Gente de Spencer)",
+      "vendors": "Proveedores y Servicios",
+      "utilities": "Utilidades / Servicios Públicos",
+      "dumpster": "Contenedores / Basura",
+      "emergency": "Emergencia / Ciudad"
+    },
   "flyer": {
     "subtitle": "Volunteer Homes, LLC | SpencerBuysHouses.com",
     "title1": "Enviar Factura o Cotización",
