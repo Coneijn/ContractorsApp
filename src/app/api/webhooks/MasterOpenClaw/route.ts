@@ -231,9 +231,18 @@ export async function POST(req: Request) {
     if ((target === 'TASK' || target === 'NEW_TASK') && process.env.GHL_API_TOKEN) {
       const statusToMap = target === 'NEW_TASK' ? 'PENDING_ESTIMATE' : (newStatus || 'UNASSIGNED');
       const ghlPipelineStageId = REVERSE_GHL_CONTRACTOR_STAGE_MAP[statusToMap] || "";
-
       const appReferenceId = taskId || targetPropertyId; 
       const ghlLocationId = process.env.GHL_LOCATION_ID || "";
+
+      console.log("\n==========================================");
+      console.log("🚨 DEBUG GHL SYNC - REVISIÓN DE VARIABLES 🚨");
+      console.log("-> target:", target);
+      console.log("-> newStatus recibido:", newStatus);
+      console.log("-> statusToMap:", statusToMap);
+      console.log("-> ghlPipelineStageId:", ghlPipelineStageId ? "✅ OK (" + ghlPipelineStageId + ")" : "❌ FALTA (El estado no coincide en REVERSE_GHL_CONTRACTOR_STAGE_MAP)");
+      console.log("-> appReferenceId (taskId o propertyId):", appReferenceId ? "✅ OK (" + appReferenceId + ")" : "❌ FALTA");
+      console.log("-> ghlLocationId (ENV):", ghlLocationId ? "✅ OK" : "❌ FALTA (Revisa tu archivo .env)");
+      console.log("==========================================\n");
 
       if (ghlPipelineStageId && appReferenceId && ghlLocationId) {
         try {
