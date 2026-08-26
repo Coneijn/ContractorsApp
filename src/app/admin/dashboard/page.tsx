@@ -131,6 +131,9 @@ export default function DashboardPage() {
         {activeTab === 'pastprojects' && (
           <PastProjectsTab properties={properties} />
         )}
+
+
+{activeTab === "directory" && <DirectoryTab />}
       </main>
 
       {/* MODALES GLOBALES */}
