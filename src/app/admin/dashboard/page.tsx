@@ -139,7 +139,7 @@ export default function DashboardPage() {
         )}
         
         {activeTab === 'pastprojects' && (
-          <PastProjectsTab properties={properties} />
+          <PastProjectsTab properties={properties} onUpdate={loadData} />
         )}
 
         {activeTab === 'directory' && (

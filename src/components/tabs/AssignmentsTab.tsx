@@ -17,6 +17,7 @@ export default function AssignmentsTab({ properties, onUpdate, onAssign }: Assig
   // 2. Separamos en asignadas (agrupadas por contratista) y tareas no asignadas
   const assignedGroups: Record<string, { contractor: any, properties: any[] }> = {};
   const unassignedTasks: { prop: any, task: any }[] = [];
+  const completedStatuses = ['WON', 'INVOICE_SUBMITTED', 'PENDING_INSPECTION_OR_QA', 'LOST'];
 
   activeProperties.forEach(prop => {
     // Si la propiedad no tiene tareas en absoluto
@@ -26,6 +27,9 @@ export default function AssignmentsTab({ properties, onUpdate, onAssign }: Assig
     }
 
     prop.tasks.forEach((task: any) => {
+      // Ignoramos tareas terminadas o canceladas (ya viven en Past Projects)
+      if (completedStatuses.includes(task.status)) return;
+
       if (task.subcontractor) {
         const subId = task.subcontractor.id;
         // Si el contratista no existe en nuestro grupo, lo inicializamos

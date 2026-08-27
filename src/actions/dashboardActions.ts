@@ -86,17 +86,32 @@ export async function updateTaskStatus(taskId: string, newStatus: string) {
           data: { status: newStatus as any } 
          });
 
-        // 2. Sincroniza el estado de la Propiedad automáticamente
-        if (newStatus === 'WON') {
-          await prisma.property.update({
-            where: { id: task.propertyId },
-            data: { status: 'COMPLETED' }
+        // 2. Sincroniza el estado de la Propiedad de forma inteligente
+        if (newStatus !== 'LOST') {
+          // Buscamos TODAS las tareas de esta propiedad
+          const allTasks = await prisma.task.findMany({
+            where: { propertyId: task.propertyId }
           });
-        } else if (newStatus !== 'LOST') {
-          await prisma.property.update({
-            where: { id: task.propertyId },
-            data: { status: 'RENOVATING' }
-          });
+          
+          // Consideramos estas tareas como "activas/pendientes"
+          const activeStatuses = ['PENDING_ESTIMATE', 'ASSIGNED_OR_TO_DO', 'IN_PROGRESS', 'UNASSIGNED'];
+          
+          // Verificamos si queda alguna tarea activa
+          const hasActiveTasks = allTasks.some(t => activeStatuses.includes(t.status));
+
+          if (!hasActiveTasks && allTasks.length > 0) {
+            // Si ya NO quedan tareas activas, completamos la propiedad
+            await prisma.property.update({
+              where: { id: task.propertyId },
+              data: { status: 'COMPLETED' }
+            });
+          } else {
+            // Si aún hay tareas trabajando, forzamos que se mantenga en renovación
+            await prisma.property.update({
+              where: { id: task.propertyId },
+              data: { status: 'RENOVATING' }
+            });
+          }
         }
 
         // ---> NOTIFICACIÓN A GHL DESDE EL DASHBOARD (Admin UI Vía API v2) <---
@@ -351,28 +366,50 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
   }
 
   export async function createAssignment(propertyId: string, subcontractorId: string, description: string) {
-    try {
-      await prisma.task.create({
+  try {
+    // 1. Buscamos si ya existe una tarea "fantasma" sin asignar con esta misma descripción
+    const existingUnassigned = await prisma.task.findFirst({
+      where: {
+        propertyId: propertyId,
+        description: description,
+        subcontractorId: null,
+        status: 'UNASSIGNED'
+      }
+    });
+
+    if (existingUnassigned && subcontractorId) {
+      // Si existe, la actualizamos inyectándole el contratista (evita duplicados)
+      await prisma.task.update({
+        where: { id: existingUnassigned.id },
         data: { 
-          propertyId, 
-          subcontractorId: subcontractorId || null, 
-          description, 
-          status: subcontractorId ? 'PENDING_ESTIMATE' : 'UNASSIGNED' 
+          subcontractorId: subcontractorId,
+          status: 'PENDING_ESTIMATE' 
         }
       });
-      
-      // Actualizamos la propiedad a RENOVATING si estaba terminada o sin asignar
-      await prisma.property.update({
-        where: { id: propertyId },
-        data: { status: 'RENOVATING' }
+    } else {
+      // Si no existe (es una tarea totalmente nueva), la creamos como siempre
+      await prisma.task.create({
+        data: { 
+           propertyId,
+           subcontractorId: subcontractorId || null,
+           description,
+           status: subcontractorId ? 'PENDING_ESTIMATE' : 'UNASSIGNED' 
+         }
       });
-      
-      return { success: true };
-    } catch (error) {
-      console.error("Error creando asignación:", error);
-      return { success: false, error: "Error interno" };
     }
+    
+    // Actualizamos la propiedad a RENOVATING si estaba terminada o sin asignar
+    await prisma.property.update({
+      where: { id: propertyId },
+      data: { status: 'RENOVATING' }
+    });
+    
+    return { success: true };
+  } catch (error) {
+    console.error("Error creando asignación:", error);
+    return { success: false, error: "Error interno" };
   }
+}
 
 export async function saveContractor(data: any) {
   try {

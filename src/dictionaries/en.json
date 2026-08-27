@@ -247,7 +247,8 @@
     "save": "Save",
     "cancel": "Cancel",
     "newContractor": "-- New Contractor --",
-    "optional": "(Optional)"
+    "optional": "(Optional)",
+    "editStage": "Edit Stage"
   },
     "directory": {
       "title": "Internal Directory",
