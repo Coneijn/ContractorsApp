@@ -50,12 +50,12 @@ export default function DirectoryTab() {
 
   return (
     <div className="space-y-6">
-      {/* Header & Controls Bilingüe */}
-      <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
+{/* Header & Controls Bilingue */}
+      <div className="bg-slate-800 p-5 rounded-xl border border-slate-700 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{labels.title}</h2>
-            <p className="text-sm text-gray-500">{labels.subtitle}</p>
+            <h2 className="text-xl font-bold text-white">{labels.title}</h2>
+            <p className="text-sm text-slate-400">{labels.subtitle}</p>
           </div>
         </div>
 
@@ -67,16 +67,16 @@ export default function DirectoryTab() {
               placeholder={labels.searchPlaceholder}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-lg text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition"
+              className="w-full pl-10 pr-4 py-2 text-sm border border-slate-600 bg-slate-900 rounded-lg text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 outline-none transition"
             />
-            <span className="absolute left-3.5 top-2.5 text-gray-400 text-sm">🔍</span>
+            <span className="absolute left-3.5 top-2.5 text-slate-500 text-sm">🔍</span>
           </div>
-
-          {/* Filtro por Categoría */}
+          
+          {/* Filtro por Categoria */}
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white text-gray-700 focus:ring-2 focus:ring-yellow-400 outline-none"
+            className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-900 text-slate-200 focus:ring-2 focus:ring-yellow-400 outline-none"
           >
             <option value="all">{labels.allCategories}</option>
             {DIRECTORY_DATA.map((cat) => (
@@ -88,10 +88,10 @@ export default function DirectoryTab() {
         </div>
       </div>
 
-      {/* Resultados */}
+{/* Resultados */}
       {filteredCategories.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-          <p className="text-gray-500">{labels.noResults}</p>
+        <div className="text-center py-12 bg-slate-800 rounded-xl border border-slate-700">
+          <p className="text-slate-400">{labels.noResults}</p>
         </div>
       ) : (
         filteredCategories.map((category) => (
@@ -101,42 +101,40 @@ export default function DirectoryTab() {
               <h3 className="text-lg font-semibold text-slate-100">
                 {dict.categories?.[category.id] || category.category}
               </h3>
-              <span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded-full font-medium border border-slate-700">
+              <span className="text-xs bg-slate-900 text-yellow-400 px-2 py-0.5 rounded-full font-bold border border-slate-700">
                 {category.contacts.length}
               </span>
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {category.contacts.map((contact, index) => {
-                const isCallable = contact.phone !== "—" && contact.phone.length > 3;
+                const isCallable = contact.phone !== " " && contact.phone.length > 3;
                 const isWa = contact.isWhatsApp || contact.channelOrNotes?.toLowerCase().includes("whatsapp");
 
                 return (
                   <div
                     key={index}
-                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition flex flex-col justify-between"
+                    className="bg-slate-800 border border-slate-700 rounded-xl p-4 shadow-sm hover:border-yellow-400 transition flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex justify-between items-start gap-2">
-                        <h4 className="font-semibold text-gray-900 text-base">{contact.name}</h4>
+                        <h4 className="font-extrabold text-yellow-400 text-base">{contact.name}</h4>
                         {isWa && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-950/50 text-emerald-400 border border-emerald-900/50">
                             WhatsApp
                           </span>
                         )}
                       </div>
-                      <p className="text-xs font-semibold text-slate-600 mt-0.5">{contact.roleOrService}</p>
-
+                      <p className="text-xs font-semibold text-slate-400 mt-0.5">{contact.roleOrService}</p>
+                      
                       {contact.channelOrNotes && !isWa && (
-                        <p className="text-xs text-amber-800 bg-amber-50 rounded p-1.5 mt-2 border border-amber-200">
-                          📌 {contact.channelOrNotes}
+                        <p className="text-[11px] text-slate-400 bg-slate-900 rounded p-2 mt-2 border border-slate-700 leading-snug">
+                            ℹ️ {contact.channelOrNotes}
                         </p>
                       )}
                     </div>
 
-                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
-                      <span className="text-sm font-semibold text-gray-800">{contact.phone}</span>
-
+                    <div className="mt-4 pt-3 border-t border-slate-700 flex items-center justify-between">
+                      <span className="text-sm font-semibold text-slate-200">{contact.phone}</span>
                       {isCallable && (
                         <div className="flex items-center gap-1.5">
                           {isWa && (
@@ -144,15 +142,15 @@ export default function DirectoryTab() {
                               href={`https://wa.me/${cleanPhoneForWhatsApp(contact.phone)}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg text-xs font-medium transition"
+                              className="p-2 bg-emerald-950/40 text-emerald-400 border border-emerald-900/50 hover:bg-emerald-900/60 rounded-lg text-xs font-medium transition"
                               title="WhatsApp"
                             >
-                              💬 WA
+                              💬
                             </a>
                           )}
                           <a
                             href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
-                            className="p-2 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg text-xs font-medium transition"
+                            className="p-2 bg-slate-700 text-slate-200 border border-slate-600 hover:bg-slate-600 rounded-lg text-xs font-medium transition"
                             title={dict.call || (isEs ? "Llamar" : "Call")}
                           >
                             📞

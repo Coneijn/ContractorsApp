@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { useLanguage } from '@/context/LanguageContext';
 import { submitContractorForm, getContractors, getActiveAssignments } from '@/actions/dashboardActions';
 import ImageUpload, { type ImageFile } from '@/components/ImageUpload';
+import ContractorBottomNav from '@/components/ContractorBottomNav';
 
 type Mode = 'invoice' | 'estimate';
-
 export default function InvoiceFormPage() {
   const { t, language, setLanguage } = useLanguage();
   const [mode, setMode] = useState<Mode>('invoice');
@@ -90,7 +90,7 @@ export default function InvoiceFormPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-200 font-sans pb-10">
+    <div className="min-h-screen bg-slate-900 text-slate-200 font-sans pb-24">
       
       {/* Hero Header */}
       <div className="bg-slate-800 border-b-4 border-yellow-400 p-5">
@@ -104,23 +104,11 @@ export default function InvoiceFormPage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 mt-4">
-        {/* Nav Bar */}
-        <div className="flex flex-wrap gap-2 items-center mb-6 print:hidden">
-          <Link href="/contractors" className="px-4 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm font-bold hover:bg-slate-700 transition">
-            {t.invoiceForm.back}
-          </Link>
-          <button onClick={() => setLanguage('en')} className={`px-4 py-2 rounded-lg border-2 text-sm font-bold transition ml-auto ${language === 'en' ? 'bg-slate-700 border-slate-600 text-yellow-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-            🇺🇸 EN
-          </button>
-          <button onClick={() => setLanguage('es')} className={`px-4 py-2 rounded-lg border-2 text-sm font-bold transition ${language === 'es' ? 'bg-slate-700 border-slate-600 text-yellow-400' : 'bg-slate-800 border-slate-700 text-slate-400'}`}>
-            🇲🇽 ES
-          </button>
-        </div>
 
         {/* QR CODE BLOCK */}
         <div className="bg-slate-800 border border-slate-700 rounded-xl p-6 text-center mb-6 print:bg-white print:border-slate-300 print:text-black">
           <div className="text-[11px] font-bold uppercase tracking-widest text-slate-400 mb-3 print:text-slate-600">
-            📱 {language === 'en' ? 'Scan to Send Invoice' : 'Escanea para Enviar Factura'}
+            📱 {language === 'en' ? 'Scan to Send Invoice from your phone' : 'Escanea para Enviar Factura desde tu celular'}
           </div>
           <img 
             src="/qr2.png" 
@@ -128,14 +116,6 @@ export default function InvoiceFormPage() {
             className="w-40 h-40 mx-auto rounded-lg bg-white p-2 mb-2 border border-slate-300" 
           />
           <div className="text-xs text-slate-500 mb-4 print:text-slate-500">myfrank.ai/subcontractors/invoice.html</div>
-          
-          <Link 
-            href="/contractors/invoice/flyer" 
-            target="_blank"
-            className="w-full max-w-sm mx-auto bg-slate-900 border border-slate-700 hover:bg-slate-700 text-yellow-400 font-bold py-3 px-4 rounded-lg transition-colors print:hidden block text-center"
-          >
-            {t.invoiceForm.printFlyer}
-          </Link>
         </div>
 
         {/* Mode Selector */}
@@ -329,6 +309,9 @@ export default function InvoiceFormPage() {
         </form>
 
       </div>
+
+      {/* Botonera inferior reusable */}
+      <ContractorBottomNav />
     </div>
   );
 }

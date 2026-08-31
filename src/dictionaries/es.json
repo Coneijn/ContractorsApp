@@ -67,12 +67,18 @@
       "date": "Fecha",
       "action": "Acción"
     },
-    "messages": {
+   "messages": {
       "loading": "Cargando propiedades...",
       "noActive": "No hay propiedades activas.",
       "noUnassigned": "No hay propiedades sin asignar.",
-      "noCompleted": "Aún no hay proyectos completados en la base de datos.",
+      "noCompleted": "A n no hay proyectos completados en la base de datos.",
       "noTasks": "Sin tareas registradas"
+    },
+    "quickActions": {
+      "title": "Acciones Rapidas",
+      "newAssignment": "Asignacion",
+      "addProperty": "Propiedad",
+      "addContractor": "Contratista"
     }
   },
   "propertyCard": {
@@ -98,19 +104,23 @@
     "deadlineTitle": "⏰ Límite: miércoles 5:00 PM",
     "deadlineSub": "→ pago viernes",
     "qrScan": "Escanea para abrir en tu celular contractors.myfrank.ai/contractors",
-    "scheduleTitle": "Calendario Semanal",
-    "wed": "MIÉ",
-    "wedTitle": "⚠️ Fecha Límite — 5:00 PM",
-    "wedDesc": "Envía antes de las 5 PM. Las facturas tardías se pagan la semana siguiente.",
+   "scheduleTitle": "Calendario Semanal",
+    "cardWed": "Miercoles",
+    "cardThu": "Jueves",
+    "cardFri": "Viernes",
+    "cardCaution": "Precaucion",
+    "wed": "MIE",
+    "wedTitle": "Fecha Limite - 5:00 PM",
+    "wedDesc": "Envia antes de las 5 PM. Las facturas tardias se pagan la semana siguiente.",
     "thu": "JUE",
-    "thuTitle": "✅ Inspección de Propiedad",
-    "thuDesc": "Verificamos que el trabajo esté 100% completo.",
+    "thuTitle": "Inspeccion de Propiedad",
+    "thuDesc": "Verificamos que el trabajo este 100% completo.",
     "fri": "VIE",
-    "friTitle": "💵 Cheque Listo",
-    "friDesc": "Recoge tu cheque después de que el trabajo sea verificado.",
+    "friTitle": "Cheque Listo",
+    "friDesc": "Recoge tu cheque despues de que el trabajo sea verificado.",
     "thuFri": "JUE/VIE",
-    "thuFriTitle": "🚫 Factura Tarde = Semana Siguiente",
-    "thuFriDesc": "Facturas del jue/vie NO se pagan esa semana.",
+    "thuFriTitle": "Factura Tarde = Semana Siguiente",
+    "thuFriDesc": "Facturas del jueves/viernes NO se pagan esa semana.",
     "rulesTitle": "Reglas de Pago",
     "rule1Title": "El Trabajo Debe Estar 100% Completo",
     "rule1Desc": "Sin pagos parciales. Trabajo incompleto = se pospone a la semana siguiente tras reinspección.",
@@ -119,7 +129,7 @@
     "rule3Title": "Se Pasó del Plazo = Semana Siguiente",
     "rule3Desc": "Si no envías a tiempo, tu pago se mueve al siguiente ciclo.",
     "rule4Title": "Sin Pago Esta Semana por Facturas Jue/Vie",
-    "rule4Desc": "Facturas del jue/vie se procesan solo la semana siguiente.",
+    "rule4Desc": "Facturas del jueves/viernes se procesan solo la semana siguiente.",
     "w9Title": "⚠️ Requerido: Formulario W-9 — Sin W-9 = Sin Pago",
     "w9Desc": "Todos los contratistas deben entregar un W-9 completo antes de recibir cualquier pago. Requerido por ley. Descárgalo en: ",
     "questions": "Preguntas:"

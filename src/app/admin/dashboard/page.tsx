@@ -1,5 +1,5 @@
 "use client"; 
-
+import QuickActions from '@/components/QuickActions';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import AssignmentsTab from '@/components/tabs/AssignmentsTab';
@@ -77,40 +77,8 @@ export default function DashboardPage() {
         </button>
       </header>
 
-      <div className="flex bg-slate-800 border-b border-slate-700 overflow-x-auto">
-        <button 
-          onClick={() => setActiveTab('roster')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'roster' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
-        >
-          👷 Roster
-        </button>
-        <button 
-          onClick={() => setActiveTab('assignments')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'assignments' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
-        >
-          {t.dashboard.tabs.assignments}
-        </button>
-        <button 
-          onClick={() => setActiveTab('properties')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'properties' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
-        >
-          {t.dashboard.tabs.properties}
-        </button>
-        <button 
-          onClick={() => setActiveTab('pastprojects')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'pastprojects' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
-        >
-          {t.dashboard.tabs.pastProjects}
-        </button>
-        <button 
-          onClick={() => setActiveTab('directory')}
-          className={`px-6 py-3 text-[13px] font-semibold border-b-4 transition-colors whitespace-nowrap ${activeTab === 'directory' ? 'text-yellow-400 border-yellow-400' : 'text-slate-400 border-transparent hover:text-slate-300'}`}
-        >
-          📁 {directoryTabLabel}
-        </button>
-      </div>
+      <main className="max-w-[1100px] mx-auto p-6 pb-[260px]">
 
-      <main className="max-w-[1100px] mx-auto p-6">
         {activeTab === 'roster' && (
           <RosterTab
              contractors={contractors}
@@ -146,6 +114,54 @@ export default function DashboardPage() {
           <DirectoryTab />
         )}
       </main>
+
+        {/* Contenedor Fijo Flotante: Barra Inferior (Quick Actions + Navegacion) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 pointer-events-auto bg-slate-900/95 backdrop-blur-md border-t border-slate-700/80 shadow-2xl flex flex-col items-center">
+        
+        {/* Fila Superior: Quick Actions */}
+        <div className="w-full flex justify-center px-4 pt-3 pb-2 border-b border-slate-700/50">
+          <QuickActions 
+            onAddAssignment={() => openAssignModal('', '', '')}
+            onAddProperty={() => setIsPropertyModalOpen(true)}
+            onAddContractor={() => setIsContractorModalOpen(true)}
+          />
+        </div>
+
+        {/* Fila Inferior: Menu de Navegacion */}
+        <div className="w-full p-3 flex gap-3 overflow-x-auto md:justify-center items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          <button
+             onClick={() => setActiveTab('roster')}
+            className={`px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 ${activeTab === 'roster' ? 'bg-yellow-400 text-slate-900 shadow-md' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm'}`}
+          >
+              Roster
+          </button>
+          <button
+             onClick={() => setActiveTab('assignments')}
+            className={`px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 ${activeTab === 'assignments' ? 'bg-yellow-400 text-slate-900 shadow-md' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm'}`}
+          >
+            {t.dashboard.tabs.assignments}
+          </button>
+          <button
+             onClick={() => setActiveTab('properties')}
+            className={`px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 ${activeTab === 'properties' ? 'bg-yellow-400 text-slate-900 shadow-md' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm'}`}
+          >
+            {t.dashboard.tabs.properties}
+          </button>
+          <button
+             onClick={() => setActiveTab('pastprojects')}
+            className={`px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 ${activeTab === 'pastprojects' ? 'bg-yellow-400 text-slate-900 shadow-md' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm'}`}
+          >
+            {t.dashboard.tabs.pastProjects}
+          </button>
+          <button
+             onClick={() => setActiveTab('directory')}
+            className={`px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 ${activeTab === 'directory' ? 'bg-yellow-400 text-slate-900 shadow-md' : 'bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm'}`}
+          >
+              {directoryTabLabel}
+          </button>
+        </div>
+
+        </div>
 
       {/* MODALES GLOBALES */}
       <NewAssignmentModal
