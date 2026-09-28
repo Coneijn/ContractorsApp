@@ -29,7 +29,7 @@ export default function ContractorPolicyPage() {
             <p className="text-sm text-green-400 mb-1 font-semibold print:text-green-800">{t.policy.whatsapp}</p>
             <div className="text-2xl font-extrabold text-green-500 tracking-wider print:text-green-700">(901) 318-1736</div>
             <div className="text-xs mt-2 text-slate-300 print:text-gray-600">
-              {t.policy.email} <a href="mailto:admin@volunteerbuyers.com" className="text-green-400 font-bold hover:underline print:text-green-700">admin@volunteerbuyers.com</a>
+              {t.policy.email} <a href="mailto:Leslie@volunteerbuyers.com" className="text-green-400 font-bold hover:underline print:text-green-700">Leslie@volunteerbuyers.com</a>
             </div>
             <div className="text-xs text-green-300 mt-3 font-semibold print:text-green-800">
               {t.policy.deadlineTitle} <strong className="text-green-400 print:text-green-700">{t.policy.deadlineSub}</strong>
@@ -89,7 +89,7 @@ export default function ContractorPolicyPage() {
 
        {/* Footer */}
         <div className="text-center text-[11px] text-slate-500 mt-6 pt-4 border-t border-slate-800 print:border-gray-300 print:text-gray-500">
-          {t.policy.subtitle}   {t.policy.questions} (901) 318-1736 WhatsApp   admin@volunteerbuyers.com
+          {t.policy.subtitle}   {t.policy.questions} (901) 318-1736 WhatsApp   Leslie@volunteerbuyers.com
         </div>
       </div>
 
