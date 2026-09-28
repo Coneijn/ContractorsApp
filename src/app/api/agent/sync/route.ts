@@ -22,14 +22,38 @@ export async function GET(req: Request) {
         address: true, 
         accessCodeOrLockbox: true,
         tasks: {
-             where: {
-             status: { in: ['PENDING_ESTIMATE', 'UNASSIGNED', 'ASSIGNED_OR_TO_DO', 'IN_PROGRESS'] } // Solo tareas no terminadas
+          where: {
+            status: { in: ['PENDING_ESTIMATE', 'UNASSIGNED', 'ASSIGNED_OR_TO_DO', 'IN_PROGRESS'] } // Solo tareas no terminadas
           },
           select: {
             id: true,
             description: true,
             subcontractorId: true
-            }
+          }
+        },
+        invoices: {
+          select: {
+            id: true,
+            subcontractorId: true,
+            workDescription: true,
+            startDate: true,
+            finishDate: true,
+            agreedAmount: true,
+            requestedAmount: true,
+            status: true,
+            createdAt: true
+          }
+        },
+        estimates: {
+          select: {
+            id: true,
+            subcontractorId: true,
+            workDescription: true,
+            estimatedStartDate: true,
+            amount: true,
+            status: true,
+            createdAt: true
+          }
         }
       }
     });
