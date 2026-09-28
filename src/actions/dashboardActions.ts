@@ -286,39 +286,48 @@ export async function getPropertyById(id: string) {
   }
 }
 
-// Nueva función para procesar el formulario de Invoice/Estimate
-export async function submitContractorForm(data: any, mode: 'invoice' | 'estimate') {
+export async function submitContractorForm(data: any, explicitMode?: 'invoice' | 'estimate') {
   try {
-    // 1. Buscar o crear al contratista por teléfono (whatsappNumber es único según el schema)
+    // 1. Resolver el modo (sea que venga como segundo parámetro o dentro de data)
+    const mode: 'invoice' | 'estimate' = explicitMode || data.mode || (data.isEstimate ? 'estimate' : 'invoice');
+
+    // Validación básica de campos requeridos por el schema
+    const phone = data.phone || data.whatsappNumber;
+    const address = data.address;
+
+    if (!phone || !address) {
+      return { success: false, error: "El teléfono y la dirección son obligatorios." };
+    }
+
+    // 2. Buscar o crear al contratista
     let subcontractor = await prisma.subcontractor.findUnique({
-      where: { whatsappNumber: data.phone }
+      where: { whatsappNumber: phone.trim() }
     });
 
     if (!subcontractor) {
       subcontractor = await prisma.subcontractor.create({
         data: {
-          name: `${data.firstName} ${data.lastName}`.trim(),
-          whatsappNumber: data.phone,
+          name: `${data.firstName || ''} ${data.lastName || ''}`.trim() || 'Subcontratista',
+          whatsappNumber: phone.trim(),
           email: data.email || null,
-          hasW9: data.w9Status === 'yes',
+          hasW9: data.w9Status === 'yes' || data.hasW9 === true,
         }
       });
     }
 
-    // 2. Buscar o crear la propiedad por dirección (address es única)
+    // 3. Buscar o crear la propiedad
     let property = await prisma.property.findUnique({
-      where: { address: data.address }
+      where: { address: address.trim() }
     });
 
     if (!property) {
       property = await prisma.property.create({
-        data: { address: data.address }
+        data: { address: address.trim() }
       });
     }
 
-    // 3. Guardar las fotos que el navegador ya subió a S3 (solo llegan URLs)
+    // 4. Guardar fotos en Media (S3)
     const photoUrls: string[] = Array.isArray(data.photos) ? data.photos : [];
-
     if (photoUrls.length > 0) {
       const safeUrls = filterOwnBucketUrls(photoUrls);
 
@@ -328,22 +337,36 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
             propertyId: property.id,
             fileUrl,
             uploadedBy: subcontractor.id,
+            fileType: 'image'
           }))
         });
       }
     }
 
-    // 4. Crear el registro en la tabla correspondiente según el modo
+    // Helper para parsear fechas de forma segura sin generar "Invalid Date"
+    const parseSafeDate = (val: any) => {
+      if (!val || typeof val !== 'string' || val.trim() === '') return null;
+      const d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    // Monto flexible (acepta requestedAmount, amount o estimateAmount)
+    const rawAmount = data.requestedAmount ?? data.amount ?? data.estimateAmount ?? 0;
+    const finalAmount = parseFloat(rawAmount) || 0;
+
+    // 5. Inserción según el Schema
     if (mode === 'invoice') {
       await prisma.invoicePayment.create({
         data: {
           propertyId: property.id,
           subcontractorId: subcontractor.id,
-          workDescription: data.workDescription,
-          startDate: data.startDate ? new Date(data.startDate) : null,
-          finishDate: data.finishDate ? new Date(data.finishDate) : null,
+          workDescription: data.workDescription || null,
+          startDate: parseSafeDate(data.startDate),
+          finishDate: parseSafeDate(data.finishDate),
           agreedAmount: parseFloat(data.agreedAmount) || 0,
-          requestedAmount: parseFloat(data.requestedAmount) || 0,
+          requestedAmount: finalAmount,
+          invoiceUrl: photoUrls[0] || null, // Guarda la foto principal como comprobante si existe
+          status: 'PENDING',
         }
       });
     } else {
@@ -351,19 +374,23 @@ export async function submitContractorForm(data: any, mode: 'invoice' | 'estimat
         data: {
           propertyId: property.id,
           subcontractorId: subcontractor.id,
-          workDescription: data.workDescription,
-          estimatedStartDate: data.estStartDate ? new Date(data.estStartDate) : null,
-          amount: parseFloat(data.requestedAmount) || 0, // En estimate se usa el amount solicitado
+          workDescription: data.workDescription || null,
+          // Acepta estStartDate o startDate si el form no cambió el nombre del input
+          estimatedStartDate: parseSafeDate(data.estStartDate || data.startDate),
+          amount: finalAmount,
+          documentUrl: photoUrls[0] || null, // Guarda el PDF/foto de la cotización si existe
+          status: 'UNDER_REVIEW', // Usa el enum EstimateStatus de tu schema
         }
       });
     }
 
     return { success: true };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error guardando el formulario:", error);
-    return { success: false, error: "Error en base de datos" };
-    }
+    // Retorna el error exacto de Prisma en desarrollo para depurar con precisión
+    return { success: false, error: error?.message || "Error en base de datos" };
   }
+}
 
   export async function createAssignment(propertyId: string, subcontractorId: string, description: string) {
   try {
