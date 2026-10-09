@@ -31,13 +31,13 @@ export default async function AdminInvoicePage() {
         </Link>
       </header>
 
-      <main className="max-w-[1100px] mx-auto p-6">
+      <main className="max-w-[1100px] mx-auto p-6 pb-28">
         <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800 shadow-sm">
-          <table className="w-full text-left text-sm">
+          <table className="w-full table-fixed text-left text-[11px] leading-tight">
             <thead className="bg-slate-900 text-[11px] font-bold uppercase tracking-widest text-yellow-400">
               <tr>
-                {["Submitted", "Contractor", "Phone", "Email", "Property", "Work", "Start", "Finish", "Agreed", "Requested", "Status", "Files"].map((h) => (
-                  <th key={h} className="whitespace-nowrap px-3 py-2">{h}</th>
+                {["Submitted", "Contractor", "Property", "Work", "Dates", "Amount", "Status", "Files"].map((h) => (
+                  <th key={h} className="px-2 py-1.5">{h}</th>
                 ))}
               </tr>
             </thead>
@@ -48,18 +48,21 @@ export default async function AdminInvoicePage() {
                 const urls = [...new Set([i.invoiceUrl, ...files.map((m) => m.fileUrl)].filter(Boolean))] as string[];
                 return (
                   <tr key={i.id} className="align-top hover:bg-slate-700/30">
-                    <td className="whitespace-nowrap px-3 py-2">{fmt(i.createdAt)}</td>
-                    <td className="px-3 py-2">{i.subcontractor.name}</td>
-                    <td className="whitespace-nowrap px-3 py-2">{i.subcontractor.whatsappNumber}</td>
-                    <td className="px-3 py-2">{i.subcontractor.email ?? "—"}</td>
-                    <td className="px-3 py-2">{i.property.address}</td>
-                    <td className="max-w-xs px-3 py-2">{i.workDescription ?? "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-2">{fmt(i.startDate)}</td>
-                    <td className="whitespace-nowrap px-3 py-2">{fmt(i.finishDate)}</td>
-                    <td className="px-3 py-2">{usd(i.agreedAmount)}</td>
-                    <td className="px-3 py-2">{usd(i.requestedAmount)}</td>
-                    <td className="px-3 py-2">{i.status}</td>
-                    <td className="px-3 py-2">
+                    <td className="px-2 py-1.5">{fmt(i.createdAt)}</td>
+                    <td className="break-words px-2 py-1.5">
+                      {i.subcontractor.name}
+                      <div className="text-slate-400">{i.subcontractor.whatsappNumber}</div>
+                      <div className="break-all text-slate-400">{i.subcontractor.email}</div>
+                    </td>
+                    <td className="break-words px-2 py-1.5">{i.property.address}</td>
+                    <td className="break-words px-2 py-1.5">{i.workDescription ?? "—"}</td>
+                    <td className="px-2 py-1.5">{fmt(i.startDate)} → {fmt(i.finishDate)}</td>
+                    <td className="px-2 py-1.5">
+                      {usd(i.requestedAmount)}
+                      <div className="text-slate-400">agreed {usd(i.agreedAmount)}</div>
+                    </td>
+                    <td className="px-2 py-1.5">{i.status}</td>
+                    <td className="px-2 py-1.5">
                       {urls.length === 0 ? "—" : (
                         <details>
                           <summary className="cursor-pointer rounded bg-yellow-400 px-2 py-1 text-xs font-bold text-slate-900">
@@ -80,6 +83,17 @@ export default async function AdminInvoicePage() {
           </table>
         </div>
       </main>
+
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-700/80 shadow-2xl">
+        <div className="w-full p-3 flex gap-3 overflow-x-auto md:justify-center items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+          {[["roster", "Roster"], ["assignments", "🔨 Assignments"], ["properties", "🏠 Properties"], ["pastprojects", "📋 Past Projects"], ["directory", "Directory"]].map(([tab, label]) => (
+            <Link key={tab} href={`/admin/dashboard?tab=${tab}`} className="px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm">
+              {label}
+            </Link>
+          ))}
+          <span className="px-5 py-2.5 text-[13px] font-bold rounded-full whitespace-nowrap shrink-0 bg-yellow-400 text-slate-900 shadow-md">Invoice</span>
+        </div>
+      </div>
     </div>
   );
 }

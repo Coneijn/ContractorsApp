@@ -48,6 +48,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadData();
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab && ['roster', 'assignments', 'properties', 'pastprojects', 'directory'].includes(tab)) setActiveTab(tab as TabType);
   }, []);
 
   // Soporte seguro para la traducción de directory mientras se actualizan los tipos del contexto
