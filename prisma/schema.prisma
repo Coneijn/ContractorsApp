@@ -126,6 +126,7 @@ model Property {
   purchasePrice       Decimal?       @db.Decimal(10, 2)
   avm                 Decimal?       @db.Decimal(10, 2)
   estRent             Decimal?       @db.Decimal(10, 2)
+  note                String?
 
   // Detalles Financieros / Préstamo
   loanLender          String?
