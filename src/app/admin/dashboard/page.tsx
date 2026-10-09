@@ -2,6 +2,7 @@
 import QuickActions from '@/components/QuickActions';
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import AssignmentsTab from '@/components/tabs/AssignmentsTab';
 import RosterTab from '@/components/tabs/RosterTab';
 import PropertiesTab from '@/components/tabs/PropertiesTab';
@@ -159,6 +160,12 @@ export default function DashboardPage() {
           >
               {directoryTabLabel}
           </button>
+          <Link
+            href="/admin/invoice"
+            className="px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm"
+          >
+              Invoice
+          </Link>
         </div>
 
         </div>
