@@ -1,4 +1,5 @@
 import Link from "next/link";
+import InvoiceBottomBar from "@/components/InvoiceBottomBar";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ export default async function AdminInvoicePage() {
         </Link>
       </header>
 
-      <main className="max-w-[1100px] mx-auto p-6 pb-28">
+      <main className="max-w-[1100px] mx-auto p-6 pb-[260px]">
         <div className="overflow-x-auto rounded-xl border border-slate-700 bg-slate-800 shadow-sm">
           <table className="w-full table-fixed text-left text-[11px] leading-tight">
             <thead className="bg-slate-900 text-[11px] font-bold uppercase tracking-widest text-yellow-400">
@@ -84,16 +85,7 @@ export default async function AdminInvoicePage() {
         </div>
       </main>
 
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900/95 backdrop-blur-md border-t border-slate-700/80 shadow-2xl">
-        <div className="w-full p-3 flex gap-3 overflow-x-auto md:justify-center items-center [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-          {[["roster", "Roster"], ["assignments", "🔨 Assignments"], ["properties", "🏠 Properties"], ["pastprojects", "📋 Past Projects"], ["directory", "Directory"]].map(([tab, label]) => (
-            <Link key={tab} href={`/admin/dashboard?tab=${tab}`} className="px-5 py-2.5 text-[13px] font-bold rounded-full transition-all whitespace-nowrap shrink-0 bg-slate-800 border border-slate-700 text-slate-300 hover:border-yellow-400 shadow-sm">
-              {label}
-            </Link>
-          ))}
-          <span className="px-5 py-2.5 text-[13px] font-bold rounded-full whitespace-nowrap shrink-0 bg-yellow-400 text-slate-900 shadow-md">Invoice</span>
-        </div>
-      </div>
+      <InvoiceBottomBar />
     </div>
   );
 }
